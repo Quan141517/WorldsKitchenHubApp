@@ -1820,6 +1820,16 @@ async function findExactRobloxSuggestion(query: string) {
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) return null;
 
+  try {
+    const exactResponse = await fetch(`/api/roblox/users/exact?username=${encodeURIComponent(normalizedQuery)}`);
+    if (exactResponse.ok) {
+      const exactResult = (await exactResponse.json()) as { user: RobloxSuggestion | null };
+      if (exactResult.user) return exactResult.user;
+    }
+  } catch {
+    // Fall back to suggestion search below.
+  }
+
   const users = await getRobloxSuggestions(normalizedQuery);
   return users.find((user) => user.username.toLowerCase() === normalizedQuery || user.displayName.toLowerCase() === normalizedQuery) || null;
 }
@@ -1957,6 +1967,7 @@ function RobloxUserInput({ value, onChange, onSelect, placeholder = "Roblox user
 function LookupPanel({ role, profiles, activityLogs, activityMinuteEntries, weeklyAssignments }: { role: StaffRole | null; profiles: StaffProfile[]; activityLogs: ActivityLog[]; activityMinuteEntries: ActivityMinuteEntry[]; weeklyAssignments: WeeklyAssignment[] }) {
   const [query, setQuery] = useState("");
   const [selectedSuggestion, setSelectedSuggestion] = useState<RobloxSuggestion | null>(null);
+  const [lookupAttempted, setLookupAttempted] = useState(false);
   const normalizedQuery = query.trim().toLowerCase();
   const matchingKnownProfile = profiles.find((profile) => profileMatchesQuery(profile, normalizedQuery));
   const inferredRole = matchingKnownProfile ? undefined : inferAssignableRoleFromRoblox(selectedSuggestion);
@@ -1976,6 +1987,7 @@ function LookupPanel({ role, profiles, activityLogs, activityMinuteEntries, week
   async function handleLookupSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!query.trim()) return;
+    setLookupAttempted(true);
     if (selectedSuggestion?.username.toLowerCase() === query.trim().toLowerCase()) return;
 
     const exactSuggestion = await findExactRobloxSuggestion(query);
@@ -1995,6 +2007,7 @@ function LookupPanel({ role, profiles, activityLogs, activityMinuteEntries, week
           value={query}
           onChange={(value) => {
             setQuery(value);
+            setLookupAttempted(false);
             if (selectedSuggestion && selectedSuggestion.username.toLowerCase() !== value.trim().toLowerCase()) setSelectedSuggestion(null);
           }}
           onSelect={setSelectedSuggestion}
@@ -2002,7 +2015,7 @@ function LookupPanel({ role, profiles, activityLogs, activityMinuteEntries, week
         <button className="button primary" type="submit">Search</button>
       </form>
       {lookupBlocked ? <EmptyState title="Lookup restricted" text="This profile is not below your current access level." /> : null}
-      {query.trim() && !lookupBlocked && !matchingKnownProfile && !selectedSuggestion ? <EmptyState title="No exact Roblox user selected" text="Choose a Roblox user from the group suggestion list to view assignment history." /> : null}
+      {query.trim() && lookupAttempted && !lookupBlocked && !matchingKnownProfile && !selectedSuggestion ? <EmptyState title="No Roblox group member found" text="Check the exact username and make sure this person is still in the Roblox group." /> : null}
       {query.trim() && !lookupBlocked && (matchingKnownProfile || selectedSuggestion) && !assignment ? <EmptyState title="No assignments" text={`${matchingRole?.name || "This Roblox group role"} does not have weekly assignments.`} /> : null}
       {query.trim() && !lookupBlocked && hasAssignableHistory ? (
         <div className="week-history">
