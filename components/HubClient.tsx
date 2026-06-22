@@ -1822,6 +1822,13 @@ function inferAssignableRoleFromRoblox(user: RobloxSuggestion | null): StaffRole
   return undefined;
 }
 
+function defaultWeeklyAssignmentForRole(roleId: StaffRoleId) {
+  if (roleId === "corporate-team") return { sessions: 0, minutes: 75, shifts: 1 };
+  if (roleId === "management-team") return { sessions: 2, minutes: 60, shifts: 1 };
+  if (roleId === "supervision-team") return { sessions: 2, minutes: 60, shifts: 0 };
+  return undefined;
+}
+
 async function findExactRobloxSuggestion(query: string) {
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) return null;
@@ -1984,6 +1991,14 @@ function LookupPanel({ role, profiles, activityLogs, activityMinuteEntries, week
   const inferredRole = matchingKnownProfile ? undefined : inferAssignableRoleFromRoblox(selectedSuggestion);
   const visibleRole = staffRoles.find((staffRole) => staffRole.id === matchingKnownProfile?.highestRoleId) || inferredRole;
   const matchingRole = getAssignableRole(visibleRole || null);
+  const lookupNames = [
+    selectedSuggestion?.username,
+    selectedSuggestion?.displayName,
+    matchingKnownProfile?.robloxUsername,
+    matchingKnownProfile?.robloxDisplayName,
+    matchingKnownProfile?.discordUsername,
+    query.trim(),
+  ].filter(Boolean).map((name) => String(name).toLowerCase());
   const lookupBlocked = Boolean(
     matchingKnownProfile
       ? !canLookupProfile(role, matchingKnownProfile)
@@ -1992,7 +2007,12 @@ function LookupPanel({ role, profiles, activityLogs, activityMinuteEntries, week
   const assignment = matchingKnownProfile
     ? getAssignmentForProfile(matchingKnownProfile, weeklyAssignments)
     : weeklyAssignments.find((item) => item.teamRoleId === matchingRole?.id);
-  const hasAssignableHistory = Boolean(query.trim() && !lookupBlocked && matchingRole && assignment && (matchingKnownProfile || selectedSuggestion));
+  const defaultAssignment = matchingRole ? defaultWeeklyAssignmentForRole(matchingRole.id) : undefined;
+  const trainingGoal = assignment?.sessions ?? defaultAssignment?.sessions ?? 0;
+  const minuteGoal = assignment?.minutes ?? defaultAssignment?.minutes ?? 0;
+  const shiftGoal = assignment?.shifts ?? defaultAssignment?.shifts ?? 0;
+  const hasLookupTarget = Boolean(matchingKnownProfile || selectedSuggestion);
+  const canShowLookupHistory = Boolean(query.trim() && !lookupBlocked && matchingRole && hasLookupTarget);
   const lookupUsername = selectedSuggestion?.username || matchingKnownProfile?.robloxUsername || query.trim();
 
   async function runLookup() {
@@ -2039,21 +2059,22 @@ function LookupPanel({ role, profiles, activityLogs, activityMinuteEntries, week
       ) : null}
       {lookupBlocked ? <EmptyState title="Lookup restricted" text="This profile is not below your current access level." /> : null}
       {query.trim() && lookupAttempted && !lookupBlocked && !matchingKnownProfile && !selectedSuggestion ? <EmptyState title="No Roblox group member found" text="Check the exact username and make sure this person is still in the Roblox group." /> : null}
-      {query.trim() && !lookupBlocked && (matchingKnownProfile || selectedSuggestion) && !assignment ? <EmptyState title="No assignments" text={`${matchingRole?.name || "This Roblox group role"} does not have weekly assignments.`} /> : null}
-      {query.trim() && !lookupBlocked && hasAssignableHistory ? (
-        <div className="week-history">
-          {buildRecentWeeks().map((week) => {
-            const weekResults = activityLogs.filter((log) => logIsInRange(log, week.start, week.end)).filter((log) => {
-              const haystack = JSON.stringify(log.roles).toLowerCase();
-              const needle = lookupUsername.toLowerCase();
-              return haystack.includes(needle) || log.loggerUsername.toLowerCase() === needle;
-            });
+      {query.trim() && !lookupBlocked && hasLookupTarget && !matchingRole ? <EmptyState title="No assignment role" text="This Roblox group role is not mapped to a staff activity team yet." /> : null}
+      {query.trim() && !lookupBlocked && hasLookupTarget && matchingRole && !assignment ? <p className="muted lookup-note">Using the default {matchingRole.name} goals until weekly assignments are saved.</p> : null}
+      {canShowLookupHistory ? (
+        <div className="section-block">
+          <div className="content-header">
+            <div>
+              <p className="eyebrow">History</p>
+              <h3>Last 8 weeks</h3>
+            </div>
+          </div>
+          <div className="week-history">
+            {buildRecentWeeks().map((week) => {
+              const weekResults = activityLogs.filter((log) => logIsInRange(log, week.start, week.end) && lookupNames.some((name) => activityLogIncludesUser(log, name)));
             const trainings = weekResults.filter((log) => log.type === "training").length;
             const shifts = weekResults.filter((log) => log.type === "shift").length;
-            const minutes = weekResults.reduce((total, log) => total + (log.creditedMinutes || 0), 0) + sumTrackedMinutes(activityMinuteEntries, [lookupUsername], week.start, week.end, selectedSuggestion?.userId || matchingKnownProfile?.robloxUserId);
-            const trainingGoal = assignment?.sessions || 0;
-            const minuteGoal = assignment?.minutes || 0;
-            const shiftGoal = assignment?.shifts || 0;
+            const minutes = weekResults.reduce((total, log) => total + (log.creditedMinutes || 0), 0) + sumTrackedMinutes(activityMinuteEntries, lookupNames.length ? lookupNames : [lookupUsername], week.start, week.end, selectedSuggestion?.userId || matchingKnownProfile?.robloxUserId);
             const trainingPercent = trainingGoal ? Math.min(100, Math.round((trainings / trainingGoal) * 100)) : 100;
             const minutePercent = minuteGoal ? Math.min(100, Math.round((minutes / minuteGoal) * 100)) : 100;
             const shiftPercent = shiftGoal ? Math.min(100, Math.round((shifts / shiftGoal) * 100)) : 100;
@@ -2073,7 +2094,8 @@ function LookupPanel({ role, profiles, activityLogs, activityMinuteEntries, week
                 </div>
               </article>
             );
-          })}
+            })}
+          </div>
         </div>
       ) : null}
     </div>
