@@ -868,6 +868,18 @@ h3 {
   font-style: normal;
 }
 
+.lookup-selected-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 18px;
+  color: var(--muted);
+}
+
+.lookup-selected-user strong {
+  color: var(--foreground);
+}
+
 .assignment-form {
   display: grid;
   grid-template-columns: minmax(180px, 1.2fr) repeat(3, minmax(110px, 0.5fr)) auto;

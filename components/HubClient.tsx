@@ -134,6 +134,12 @@ async function getRobloxSuggestions(query: string) {
   return users;
 }
 
+function findExactSuggestion(users: RobloxSuggestion[], query: string) {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return null;
+  return users.find((user) => user.username.toLowerCase() === normalizedQuery || user.displayName.toLowerCase() === normalizedQuery) || null;
+}
+
 function canSee(role: StaffRole | null, allowedRoleIds: string[]) {
   if (!role) return false;
   return allowedRoleIds.includes(role.id);
@@ -1883,6 +1889,8 @@ function RobloxUserInput({ value, onChange, onSelect, placeholder = "Roblox user
     try {
       const users = await getRobloxSuggestions(query);
       setSuggestions(users);
+      const exactUser = findExactSuggestion(users, query);
+      if (exactUser) onSelect?.(exactUser);
       if (openAfterLoad) setOpen(Boolean(users.length));
     } catch {
       setSuggestions([]);
@@ -1898,6 +1906,8 @@ function RobloxUserInput({ value, onChange, onSelect, placeholder = "Roblox user
         const users = await getRobloxSuggestions(query);
         if (!cancelled) {
           setSuggestions(users);
+          const exactUser = findExactSuggestion(users, query);
+          if (exactUser) onSelect?.(exactUser);
           setOpen(focused && Boolean(users.length));
         }
       } catch {
@@ -2021,6 +2031,12 @@ function LookupPanel({ role, profiles, activityLogs, activityMinuteEntries, week
         />
         <button className="button primary" type="button" onClick={() => void runLookup()}>{lookupSearching ? "Searching..." : "Search"}</button>
       </form>
+      {selectedSuggestion ? (
+        <div className="lookup-selected-user">
+          <strong>{selectedSuggestion.username}</strong>
+          <span>{selectedSuggestion.roleName || "Roblox group member"}{selectedSuggestion.roleRank ? ` - rank ${selectedSuggestion.roleRank}` : ""}</span>
+        </div>
+      ) : null}
       {lookupBlocked ? <EmptyState title="Lookup restricted" text="This profile is not below your current access level." /> : null}
       {query.trim() && lookupAttempted && !lookupBlocked && !matchingKnownProfile && !selectedSuggestion ? <EmptyState title="No Roblox group member found" text="Check the exact username and make sure this person is still in the Roblox group." /> : null}
       {query.trim() && !lookupBlocked && (matchingKnownProfile || selectedSuggestion) && !assignment ? <EmptyState title="No assignments" text={`${matchingRole?.name || "This Roblox group role"} does not have weekly assignments.`} /> : null}
