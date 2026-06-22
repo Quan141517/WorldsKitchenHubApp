@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readHubData } from "@/lib/hub-store";
+import { getRobloxGroupMembership, resolveRobloxProfile } from "@/lib/roblox";
 import { getSession } from "@/lib/session";
 
 type RobloxGroupUser = {
@@ -63,6 +64,18 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const exactProfile = query ? await resolveRobloxProfile(query) : null;
+    const exactMembership = exactProfile ? await getRobloxGroupMembership(exactProfile.userId) : null;
+    const exactUser = exactProfile && exactMembership ? {
+      userId: exactProfile.userId,
+      username: exactProfile.username,
+      displayName: exactProfile.displayName,
+      avatarUrl: exactProfile.avatarUrl,
+      roleName: exactMembership.roleName,
+      roleRank: exactMembership.roleRank,
+      source: "group",
+    } : null;
+
     const groupMembers: RobloxGroupUser[] = [];
     let cursor = "";
 
@@ -92,8 +105,11 @@ export async function GET(request: NextRequest) {
       ...user,
       avatarUrl: localUsers.find((localUser) => localUser.userId === user.userId)?.avatarUrl || avatarUrls.get(user.userId) || null,
     }));
+    const users = exactUser
+      ? [exactUser, ...groupUsers.filter((user) => user.userId !== exactUser.userId)]
+      : groupUsers;
 
-    return NextResponse.json({ users: groupUsers.slice(0, 18), needsGroupId: false });
+    return NextResponse.json({ users: users.slice(0, 18), needsGroupId: false });
   } catch {
     return NextResponse.json({ users: localUsers.slice(0, 12), needsGroupId: false });
   }

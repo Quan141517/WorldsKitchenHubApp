@@ -1968,6 +1968,7 @@ function LookupPanel({ role, profiles, activityLogs, activityMinuteEntries, week
   const [query, setQuery] = useState("");
   const [selectedSuggestion, setSelectedSuggestion] = useState<RobloxSuggestion | null>(null);
   const [lookupAttempted, setLookupAttempted] = useState(false);
+  const [lookupSearching, setLookupSearching] = useState(false);
   const normalizedQuery = query.trim().toLowerCase();
   const matchingKnownProfile = profiles.find((profile) => profileMatchesQuery(profile, normalizedQuery));
   const inferredRole = matchingKnownProfile ? undefined : inferAssignableRoleFromRoblox(selectedSuggestion);
@@ -1984,14 +1985,20 @@ function LookupPanel({ role, profiles, activityLogs, activityMinuteEntries, week
   const hasAssignableHistory = Boolean(query.trim() && !lookupBlocked && matchingRole && assignment && (matchingKnownProfile || selectedSuggestion));
   const lookupUsername = selectedSuggestion?.username || matchingKnownProfile?.robloxUsername || query.trim();
 
-  async function handleLookupSubmit(event: React.FormEvent) {
-    event.preventDefault();
+  async function runLookup() {
     if (!query.trim()) return;
     setLookupAttempted(true);
     if (selectedSuggestion?.username.toLowerCase() === query.trim().toLowerCase()) return;
 
+    setLookupSearching(true);
     const exactSuggestion = await findExactRobloxSuggestion(query);
     if (exactSuggestion) setSelectedSuggestion(exactSuggestion);
+    setLookupSearching(false);
+  }
+
+  function handleLookupSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    void runLookup();
   }
 
   return (
@@ -2012,7 +2019,7 @@ function LookupPanel({ role, profiles, activityLogs, activityMinuteEntries, week
           }}
           onSelect={setSelectedSuggestion}
         />
-        <button className="button primary" type="submit">Search</button>
+        <button className="button primary" type="button" onClick={() => void runLookup()}>{lookupSearching ? "Searching..." : "Search"}</button>
       </form>
       {lookupBlocked ? <EmptyState title="Lookup restricted" text="This profile is not below your current access level." /> : null}
       {query.trim() && lookupAttempted && !lookupBlocked && !matchingKnownProfile && !selectedSuggestion ? <EmptyState title="No Roblox group member found" text="Check the exact username and make sure this person is still in the Roblox group." /> : null}
