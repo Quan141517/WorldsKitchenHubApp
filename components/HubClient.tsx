@@ -1988,7 +1988,7 @@ function LookupPanel({ role, profiles, activityLogs, activityMinuteEntries, week
   const [lookupSearching, setLookupSearching] = useState(false);
   const normalizedQuery = query.trim().toLowerCase();
   const matchingKnownProfile = profiles.find((profile) => profileMatchesQuery(profile, normalizedQuery));
-  const inferredRole = matchingKnownProfile ? undefined : inferAssignableRoleFromRoblox(selectedSuggestion);
+  const inferredRole = inferAssignableRoleFromRoblox(selectedSuggestion);
   const visibleRole = staffRoles.find((staffRole) => staffRole.id === matchingKnownProfile?.highestRoleId) || inferredRole;
   const matchingRole = getAssignableRole(visibleRole || null);
   const lookupNames = [
