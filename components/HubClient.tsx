@@ -1660,10 +1660,10 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
             <button type="button" title="Clear formatting" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("removeFormat")}>Clear</button>
           </div>
           <div className="toolbar-group">
-            <select defaultValue="1.7" onMouseDown={saveEditorSelection} onChange={(event) => applyLineHeight(event.target.value)} aria-label="Line height">
-              <option value="1.35">Tight</option>
-              <option value="1.7">Normal spacing</option>
-              <option value="2">Relaxed</option>
+            <select defaultValue="1.18" onMouseDown={saveEditorSelection} onChange={(event) => applyLineHeight(event.target.value)} aria-label="Line height">
+              <option value="1.05">Tight</option>
+              <option value="1.18">Normal spacing</option>
+              <option value="1.35">Relaxed</option>
             </select>
             <label className="compact-tool">
               Text

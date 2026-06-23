@@ -1834,7 +1834,7 @@ h3 {
   background: #fffefa;
   color: var(--ink);
   padding: clamp(28px, 5vw, 64px);
-  line-height: 1.38;
+  line-height: 1.18;
   outline: none;
   overflow: auto;
   box-shadow: 0 14px 36px rgba(31, 41, 51, 0.08);
@@ -1854,49 +1854,53 @@ h3 {
 
 .rich-editor h1,
 .reader-content h1 {
-  margin: 0 0 14px;
+  margin: 0 0 8px;
   color: var(--ink);
   font-size: 1.9rem;
-  line-height: 1.15;
+  line-height: 1.08;
 }
 
 .rich-editor h2,
 .reader-content h2 {
-  margin: 20px 0 9px;
+  margin: 12px 0 5px;
   color: var(--ink);
   font-size: 1.34rem;
-  line-height: 1.25;
+  line-height: 1.12;
 }
 
 .rich-editor h3,
 .reader-content h3 {
-  margin: 16px 0 8px;
+  margin: 10px 0 4px;
   color: var(--ink);
   font-size: 1.12rem;
-  line-height: 1.3;
+  line-height: 1.14;
 }
 
+.rich-editor div,
+.reader-content div,
 .rich-editor p,
 .reader-content p {
-  margin: 0 0 8px;
+  min-height: 1.18em;
+  margin: 0 0 2px;
+  line-height: inherit;
 }
 
 .rich-editor ul,
 .rich-editor ol,
 .reader-content ul,
 .reader-content ol {
-  margin: 0 0 16px 24px;
+  margin: 0 0 6px 24px;
   padding: 0;
 }
 
 .rich-editor li,
 .reader-content li {
-  margin-bottom: 6px;
+  margin-bottom: 2px;
 }
 
 .rich-editor blockquote,
 .reader-content blockquote {
-  margin: 18px 0;
+  margin: 8px 0;
   border-left: 4px solid var(--accent);
   background: rgba(15, 118, 110, 0.07);
   padding: 10px 14px;
@@ -1912,7 +1916,7 @@ h3 {
   color: #f8fafc;
   padding: 14px;
   font-family: "Courier New", Courier, monospace;
-  line-height: 1.5;
+  line-height: 1.25;
 }
 
 .rich-editor a,
@@ -1927,7 +1931,7 @@ h3 {
   height: 1px;
   border: 0;
   background: var(--line);
-  margin: 28px 0;
+  margin: 12px 0;
 }
 
 .compact-modal {
