@@ -726,17 +726,17 @@ h3 {
 
 .reader-content {
   color: var(--ink);
-  line-height: 1.75;
+  line-height: 1.18;
   user-select: none;
 }
 
 .reader-content h2 {
-  margin-top: 28px;
+  margin-top: 12px;
   font-size: 1.45rem;
 }
 
 .reader-content h3 {
-  margin-top: 22px;
+  margin-top: 10px;
   text-align: left;
   font-size: 1.18rem;
 }
@@ -1881,8 +1881,18 @@ h3 {
 .rich-editor p,
 .reader-content p {
   min-height: 1.18em;
-  margin: 0 0 2px;
-  line-height: inherit;
+  margin: 0 0 1px !important;
+  line-height: 1.18 !important;
+}
+
+.rich-editor > *,
+.reader-content > * {
+  margin-block: 0 3px !important;
+}
+
+.rich-editor br,
+.reader-content br {
+  line-height: 1.18;
 }
 
 .rich-editor ul,

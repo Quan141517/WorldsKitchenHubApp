@@ -177,12 +177,6 @@ function getSessionAdminPermissions(data: HubData, discordUserId: string) {
   return permissions;
 }
 
-const leaderboards = [
-  ["Minutes", "SamuelWK", "248 min", "#4 - 176 min"],
-  ["Trainings", "LucaHost", "9 logs", "#2 - 7 logs"],
-  ["Shifts", "AveryHR", "5 logs", "#3 - 4 logs"],
-] as const;
-
 const cardAccentOptions = [
   ["", "Neutral"],
   ["purple", "Soft Purple"],
@@ -1465,7 +1459,7 @@ function ReaderView({ categoryName, resource, role, adminPermissions, backToCate
 function ResourceEditor({ category, resource, close, save }: { category: Category; resource?: Resource; close: () => void; save: (categoryId: string, resource: Resource) => void }) {
   const [title, setTitle] = useState(resource?.title || "");
   const [status, setStatus] = useState<Resource["status"]>(resource?.status || "draft");
-  const [content, setContent] = useState(resource?.contentHtml || "<h2>New Resource</h2><p>Write the content here.</p>");
+  const [content, setContent] = useState(resource?.contentHtml || "<p></p>");
   const [accentColor, setAccentColor] = useState(resource?.accentColor || "");
   const [blockStyle, setBlockStyle] = useState("p");
   const [fontFamily, setFontFamily] = useState<string>(editorFonts[0][0]);
@@ -1566,6 +1560,15 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
           .replace(/\sstyle="[^"]*"/gi, "")
       : text.split(/\n{2,}/).map((paragraph) => `<p>${paragraph.replace(/\n/g, "<br>")}</p>`).join("");
     document.execCommand("insertHTML", false, cleanedHtml);
+    if (editorRef.current) setContent(editorRef.current.innerHTML);
+    saveEditorSelection();
+  }
+
+  function handleEditorKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    restoreEditorSelection();
+    document.execCommand("insertHTML", false, "<br>");
     if (editorRef.current) setContent(editorRef.current.innerHTML);
     saveEditorSelection();
   }
@@ -1690,6 +1693,7 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
               saveEditorSelection();
             }}
             onPaste={handleEditorPaste}
+            onKeyDown={handleEditorKeyDown}
             onKeyUp={saveEditorSelection}
             onMouseUp={saveEditorSelection}
           />
@@ -1764,7 +1768,7 @@ function StaffActivityView({
       {activeTab === "lookup" && canUseLookup ? <LookupPanel role={role} profiles={profiles} activityLogs={activeLogs} activityMinuteEntries={activityMinuteEntries} weeklyAssignments={activeAssignments} /> : null}
       {activeTab === "logs" ? <LogsPanel role={role} session={session} adminPermissions={adminPermissions} activitySlotsConfig={activitySlotsConfig} activityLogs={activeLogs} profiles={profiles} createActivityLog={createActivityLog} updateActivityLog={updateActivityLog} deleteActivityLog={deleteActivityLog} /> : null}
       {activeTab === "assignments" && canUseAssignments ? <AssignmentsPanel role={role} adminPermissions={adminPermissions} activitySlotsConfig={activitySlotsConfig} weeklyAssignments={activeAssignments} saveWeeklyAssignment={saveWeeklyAssignment} saveActivitySlots={saveActivitySlots} deleteWeeklyAssignment={deleteWeeklyAssignment} /> : null}
-      {activeTab === "leaders" ? <LeaderboardsPanel activityLogs={activeLogs} /> : null}
+      {activeTab === "leaders" ? <LeaderboardsPanel activityLogs={activeLogs} activityMinuteEntries={activityMinuteEntries} /> : null}
       <datalist id="staffUsernameSuggestions">
         {usernameSuggestions.map((username) => <option value={username} key={username} />)}
       </datalist>
@@ -1781,15 +1785,39 @@ function activityLogIncludesUser(log: ActivityLog, username: string) {
   return JSON.stringify(log.roles).toLowerCase().includes(needle);
 }
 
+function getActivityLogUsers(log: ActivityLog) {
+  const roles = log.roles;
+  const names = log.type === "training"
+    ? [
+        roles.logger,
+        (roles as TrainingRoles).host,
+        (roles as TrainingRoles).coHost,
+        ...(roles as TrainingRoles).overseers,
+        (roles as TrainingRoles).trainerA,
+        ...(roles as TrainingRoles).assistantsA,
+        (roles as TrainingRoles).trainerB,
+        ...(roles as TrainingRoles).assistantsB,
+        (roles as TrainingRoles).trainerC,
+        ...(roles as TrainingRoles).assistantsC,
+      ]
+    : [
+        roles.logger,
+        (roles as ShiftRoles).host,
+        (roles as ShiftRoles).coHost,
+        ...(roles as ShiftRoles).attendees,
+      ];
+
+  return Array.from(new Set(names.map((name) => name?.trim()).filter(Boolean) as string[]));
+}
+
 function collectUsernamesFromLogs(activityLogs: ActivityLog[], profiles: StaffProfile[]) {
-  const names = new Set<string>(["SamuelWK", "MayaChef", "LucaHost", "NoraPR", "AveryHR"]);
+  const names = new Set<string>();
   profiles.forEach((profile) => {
     if (profile.robloxUsername) names.add(profile.robloxUsername);
     if (profile.discordUsername) names.add(profile.discordUsername);
   });
   for (const log of activityLogs) {
-    const matches = JSON.stringify(log.roles).match(/[A-Za-z0-9_]{3,20}/g) || [];
-    matches.forEach((name) => names.add(name));
+    getActivityLogUsers(log).forEach((name) => names.add(name));
   }
   return Array.from(names).sort((a, b) => a.localeCompare(b));
 }
@@ -2744,39 +2772,96 @@ function SlotTimeEditor({
   );
 }
 
-function LeaderboardsPanel({ activityLogs }: { activityLogs: ActivityLog[] }) {
-  const trainingLeaders = activityLogs.filter((log) => log.type === "training").length;
-  const shiftLeaders = activityLogs.filter((log) => log.type === "shift").length;
+function LeaderboardsPanel({ activityLogs, activityMinuteEntries }: { activityLogs: ActivityLog[]; activityMinuteEntries: ActivityMinuteEntry[] }) {
+  const weekStart = startOfWeek(getTodayDate());
+  const weekEnd = addDays(weekStart, 7);
+  const weeklyLogs = activityLogs.filter((log) => logIsInRange(log, weekStart, weekEnd));
+  const weeklyMinutes = activityMinuteEntries.filter((entry) => isDateInRange(entry.recordedAt, weekStart, weekEnd));
+  const boards = [
+    {
+      title: "Minutes",
+      rows: buildMinuteLeaderboard(weeklyMinutes),
+      format: (value: number) => `${value} min`,
+    },
+    {
+      title: "Trainings",
+      rows: buildLogLeaderboard(weeklyLogs.filter((log) => log.type === "training")),
+      format: (value: number) => pluralize(value, "log"),
+    },
+    {
+      title: "Shifts",
+      rows: buildLogLeaderboard(weeklyLogs.filter((log) => log.type === "shift")),
+      format: (value: number) => pluralize(value, "log"),
+    },
+  ];
+
   return (
     <div className="leaderboard-grid">
-      {leaderboards.map(([title, winner, value, current], index) => (
-        <article className={`leaderboard-card tone-${index}`} key={title}>
+      {boards.map((board, index) => {
+        const [winner, ...otherRows] = board.rows;
+        return (
+        <article className={`leaderboard-card tone-${index}`} key={board.title}>
           <div className="leaderboard-head">
             <div>
-              <p className="eyebrow">{title}</p>
-              <h4>{title} board</h4>
+              <p className="eyebrow">{board.title}</p>
+              <h4>{board.title} board</h4>
             </div>
-            <span>Top 3</span>
+            <span>This week</span>
           </div>
-          <div className="leaderboard-winner">
-            <span className="rank-avatar">{winner.slice(0, 2).toUpperCase()}</span>
-            <div>
-              <strong>{winner}</strong>
-              <p className="muted">Top spot - {value}</p>
-            </div>
-          </div>
-          <div className="leaderboard-rows">
-            <div className="leaderboard-row"><span>#2</span><strong>{index === 0 ? "MayaChef" : index === 1 ? "SamuelWK" : "NoraPR"}</strong><em>{index === 0 ? "214 min" : index === 1 ? "7 logs" : "4 logs"}</em></div>
-            <div className="leaderboard-row"><span>#3</span><strong>{index === 0 ? "LucaHost" : index === 1 ? "AveryHR" : "MayaChef"}</strong><em>{index === 0 ? "199 min" : index === 1 ? "6 logs" : "3 logs"}</em></div>
-          </div>
+          {winner ? (
+            <>
+              <div className="leaderboard-winner">
+                <span className="rank-avatar">{winner.name.slice(0, 2).toUpperCase()}</span>
+                <div>
+                  <strong>{winner.name}</strong>
+                  <p className="muted">Top spot - {board.format(winner.value)}</p>
+                </div>
+              </div>
+              <div className="leaderboard-rows">
+                {otherRows.slice(0, 2).map((row, rowIndex) => (
+                  <div className="leaderboard-row" key={row.name}>
+                    <span>#{rowIndex + 2}</span>
+                    <strong>{row.name}</strong>
+                    <em>{board.format(row.value)}</em>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : <EmptyState title="No data yet" text={`No ${board.title.toLowerCase()} have been recorded this week.`} />}
           <div className="leaderboard-current">
-            <span>Your position</span>
-            <strong>{title === "Trainings" ? `${trainingLeaders} logged` : title === "Shifts" ? `${shiftLeaders} logged` : current}</strong>
+            <span>Total recorded</span>
+            <strong>{board.format(board.rows.reduce((total, row) => total + row.value, 0))}</strong>
           </div>
         </article>
-      ))}
+        );
+      })}
     </div>
   );
+}
+
+function buildMinuteLeaderboard(entries: ActivityMinuteEntry[]) {
+  const totals = new Map<string, number>();
+  entries.forEach((entry) => {
+    totals.set(entry.robloxUsername, (totals.get(entry.robloxUsername) || 0) + entry.minutes);
+  });
+  return sortLeaderboardRows(totals);
+}
+
+function buildLogLeaderboard(logs: ActivityLog[]) {
+  const totals = new Map<string, number>();
+  logs.forEach((log) => {
+    getActivityLogUsers(log).forEach((name) => {
+      totals.set(name, (totals.get(name) || 0) + 1);
+    });
+  });
+  return sortLeaderboardRows(totals);
+}
+
+function sortLeaderboardRows(totals: Map<string, number>) {
+  return Array.from(totals, ([name, value]) => ({ name, value }))
+    .filter((row) => row.name && row.value > 0)
+    .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name))
+    .slice(0, 3);
 }
 
 function RecoveryBinView({
