@@ -196,16 +196,17 @@ const editorFonts = [
   ["Inter, Arial, sans-serif", "Inter"],
   ["Arial, Helvetica, sans-serif", "Arial"],
   ["Georgia, serif", "Georgia"],
+  ['"Luckiest Guy", Inter, Arial, sans-serif', "Luckiest Guy"],
   ['"Times New Roman", Times, serif', "Times"],
   ['"Courier New", Courier, monospace', "Courier"],
 ] as const;
 
 const editorTextSizes = [
-  ["0.82rem", "Small"],
+  ["0.86rem", "Small"],
   ["1rem", "Normal"],
-  ["1.18rem", "Large"],
-  ["1.45rem", "Title"],
-  ["1.9rem", "Display"],
+  ["1.15rem", "Large"],
+  ["1.35rem", "Title"],
+  ["1.7rem", "Display"],
 ] as const;
 
 const robloxRankRanges: Array<{ roleId: StaffRoleId; min: number; max: number }> = [
@@ -1499,43 +1500,51 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
     selection.addRange(range);
   }
 
+  function applyInlineStyle(styles: Record<string, string>) {
+    restoreEditorSelection();
+    const selection = window.getSelection();
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : editorSelectionRef.current;
+    if (!selection || !range || !editorRef.current?.contains(range.commonAncestorContainer)) return;
+
+    const span = document.createElement("span");
+    Object.entries(styles).forEach(([property, value]) => {
+      if (value) span.style.setProperty(property.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`), value);
+    });
+
+    if (range.collapsed) {
+      span.appendChild(document.createTextNode("\u200B"));
+      range.insertNode(span);
+      const nextRange = document.createRange();
+      nextRange.setStart(span.firstChild || span, 1);
+      nextRange.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(nextRange);
+    } else {
+      const contents = range.extractContents();
+      span.appendChild(contents);
+      range.insertNode(span);
+      const nextRange = document.createRange();
+      nextRange.selectNodeContents(span);
+      selection.removeAllRanges();
+      selection.addRange(nextRange);
+    }
+
+    editorSelectionRef.current = selection.getRangeAt(0).cloneRange();
+    setContent(editorRef.current.innerHTML);
+  }
+
   function applyFontSize(size: string) {
     setFontSize(size);
-    restoreEditorSelection();
-    document.execCommand("fontSize", false, "7");
-    const editor = editorRef.current;
-    if (!editor) return;
-
-    editor.querySelectorAll("font[size='7']").forEach((fontElement) => {
-      const span = document.createElement("span");
-      span.style.setProperty("font-size", size, "important");
-      span.style.lineHeight = "1.35";
-      span.innerHTML = fontElement.innerHTML;
-      fontElement.replaceWith(span);
-    });
-    setContent(editor.innerHTML);
-    saveEditorSelection();
+    applyInlineStyle({ fontSize: size });
   }
 
   function applyFontFamily(family: string) {
     setFontFamily(family);
-    runCommand("fontName", family);
+    applyInlineStyle({ fontFamily: family });
   }
 
   function applyLineHeight(lineHeight: string) {
-    restoreEditorSelection();
-    document.execCommand("fontSize", false, "7");
-    const editor = editorRef.current;
-    if (!editor) return;
-
-    editor.querySelectorAll("font[size='7']").forEach((fontElement) => {
-      const span = document.createElement("span");
-      span.style.lineHeight = lineHeight;
-      span.innerHTML = fontElement.innerHTML;
-      fontElement.replaceWith(span);
-    });
-    setContent(editor.innerHTML);
-    saveEditorSelection();
+    applyInlineStyle({ lineHeight });
   }
 
   function insertLink() {
@@ -1563,7 +1572,7 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    const currentContent = editorRef.current?.innerHTML || content;
+    const currentContent = (editorRef.current?.innerHTML || content).replace(/\u200B/g, "");
     const plainText = currentContent.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
     const nextResource: Resource = {
       id: resource?.id || title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `resource-${Date.now()}`,
