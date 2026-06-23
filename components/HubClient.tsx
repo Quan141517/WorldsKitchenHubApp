@@ -192,6 +192,22 @@ const cardAccentOptions = [
   ["rose", "Soft Rose"],
 ] as const;
 
+const editorFonts = [
+  ["Inter, Arial, sans-serif", "Inter"],
+  ["Arial, Helvetica, sans-serif", "Arial"],
+  ["Georgia, serif", "Georgia"],
+  ['"Times New Roman", Times, serif', "Times"],
+  ['"Courier New", Courier, monospace', "Courier"],
+] as const;
+
+const editorTextSizes = [
+  ["0.82rem", "Small"],
+  ["1rem", "Normal"],
+  ["1.18rem", "Large"],
+  ["1.45rem", "Title"],
+  ["1.9rem", "Display"],
+] as const;
+
 const robloxRankRanges: Array<{ roleId: StaffRoleId; min: number; max: number }> = [
   { roleId: "worlds-kitchen-team", min: 5, max: 20 },
   { roleId: "supervision-team", min: 25, max: 40 },
@@ -1451,6 +1467,8 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
   const [content, setContent] = useState(resource?.contentHtml || "<h2>New Resource</h2><p>Write the content here.</p>");
   const [accentColor, setAccentColor] = useState(resource?.accentColor || "");
   const [blockStyle, setBlockStyle] = useState("p");
+  const [fontFamily, setFontFamily] = useState<string>(editorFonts[0][0]);
+  const [fontSize, setFontSize] = useState("1rem");
   const editorRef = useRef<HTMLDivElement | null>(null);
   const editorSelectionRef = useRef<Range | null>(null);
 
@@ -1463,8 +1481,8 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
   function runCommand(command: string, value?: string) {
     restoreEditorSelection();
     document.execCommand(command, false, value);
-    const editor = document.querySelector<HTMLElement>("[data-resource-editor]");
-    if (editor) setContent(editor.innerHTML);
+    if (editorRef.current) setContent(editorRef.current.innerHTML);
+    saveEditorSelection();
   }
 
   function saveEditorSelection() {
@@ -1482,6 +1500,7 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
   }
 
   function applyFontSize(size: string) {
+    setFontSize(size);
     restoreEditorSelection();
     document.execCommand("fontSize", false, "7");
     const editor = editorRef.current;
@@ -1495,6 +1514,50 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
       fontElement.replaceWith(span);
     });
     setContent(editor.innerHTML);
+    saveEditorSelection();
+  }
+
+  function applyFontFamily(family: string) {
+    setFontFamily(family);
+    runCommand("fontName", family);
+  }
+
+  function applyLineHeight(lineHeight: string) {
+    restoreEditorSelection();
+    document.execCommand("fontSize", false, "7");
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    editor.querySelectorAll("font[size='7']").forEach((fontElement) => {
+      const span = document.createElement("span");
+      span.style.lineHeight = lineHeight;
+      span.innerHTML = fontElement.innerHTML;
+      fontElement.replaceWith(span);
+    });
+    setContent(editor.innerHTML);
+    saveEditorSelection();
+  }
+
+  function insertLink() {
+    restoreEditorSelection();
+    const url = window.prompt("Paste the link URL");
+    if (!url) return;
+    const normalizedUrl = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+    runCommand("createLink", normalizedUrl);
+  }
+
+  function handleEditorPaste(event: React.ClipboardEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const html = event.clipboardData.getData("text/html");
+    const text = event.clipboardData.getData("text/plain");
+    const cleanedHtml = html
+      ? html
+          .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
+          .replace(/\sclass="[^"]*"/gi, "")
+          .replace(/\sstyle="[^"]*"/gi, "")
+      : text.split(/\n{2,}/).map((paragraph) => `<p>${paragraph.replace(/\n/g, "<br>")}</p>`).join("");
+    document.execCommand("insertHTML", false, cleanedHtml);
+    if (editorRef.current) setContent(editorRef.current.innerHTML);
     saveEditorSelection();
   }
 
@@ -1525,70 +1588,103 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
           </div>
           <button className="icon-button" type="button" onClick={close}>x</button>
         </div>
-        <label>
-          Title
-          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Resource title" />
-        </label>
-        <label>
-          Status
-          <select value={status} onChange={(event) => setStatus(event.target.value as Resource["status"])}>
-            <option value="draft">Draft</option>
-            <option value="published">Published</option>
-          </select>
-        </label>
-        <label>
-          Preview card color
-          <select value={accentColor} onChange={(event) => setAccentColor(event.target.value)}>
-            {cardAccentOptions.map(([value, label]) => <option value={value} key={value || "neutral"}>{label}</option>)}
-          </select>
-        </label>
+        <div className="editor-meta-grid">
+          <label>
+            Title
+            <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Resource title" />
+          </label>
+          <label>
+            Status
+            <select value={status} onChange={(event) => setStatus(event.target.value as Resource["status"])}>
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+            </select>
+          </label>
+          <label>
+            Preview card color
+            <select value={accentColor} onChange={(event) => setAccentColor(event.target.value)}>
+              {cardAccentOptions.map(([value, label]) => <option value={value} key={value || "neutral"}>{label}</option>)}
+            </select>
+          </label>
+        </div>
         <div className="format-toolbar" aria-label="Formatting tools">
-          <select value={blockStyle} onChange={(event) => {
-            setBlockStyle(event.target.value);
-            runCommand("formatBlock", event.target.value);
-          }}>
-            <option value="p">Normal text</option>
-            <option value="h2">Title</option>
-            <option value="h3">Subtitle</option>
-          </select>
-          <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("bold")}>Bold</button>
-          <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("italic")}>Italic</button>
-          <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("underline")}>Underline</button>
-          <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("insertUnorderedList")}>List</button>
-          <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("justifyLeft")}>Left</button>
-          <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("justifyCenter")}>Center</button>
-          <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("justifyRight")}>Right</button>
-          <select defaultValue="1rem" onMouseDown={saveEditorSelection} onChange={(event) => applyFontSize(event.target.value)} aria-label="Text size">
-            <option value="0.9rem">Small</option>
-            <option value="1rem">Normal size</option>
-            <option value="1.25rem">Large</option>
-            <option value="1.55rem">Extra large</option>
-            <option value="2rem">Huge</option>
-          </select>
-          <label className="compact-tool">
-            Text
-            <input type="color" defaultValue="#1f2933" onChange={(event) => runCommand("foreColor", event.target.value)} />
-          </label>
-          <label className="compact-tool">
-            Highlight
-            <input type="color" defaultValue="#fff3a3" onChange={(event) => runCommand("backColor", event.target.value)} />
-          </label>
+          <div className="toolbar-group">
+            <select value={blockStyle} onMouseDown={saveEditorSelection} onChange={(event) => {
+              setBlockStyle(event.target.value);
+              runCommand("formatBlock", event.target.value);
+            }} aria-label="Paragraph style">
+              <option value="p">Normal text</option>
+              <option value="h1">Heading 1</option>
+              <option value="h2">Heading 2</option>
+              <option value="h3">Heading 3</option>
+              <option value="blockquote">Quote</option>
+              <option value="pre">Code block</option>
+            </select>
+            <select value={fontFamily} onMouseDown={saveEditorSelection} onChange={(event) => applyFontFamily(event.target.value)} aria-label="Font family">
+              {editorFonts.map(([value, label]) => <option value={value} key={value}>{label}</option>)}
+            </select>
+            <select value={fontSize} onMouseDown={saveEditorSelection} onChange={(event) => applyFontSize(event.target.value)} aria-label="Text size">
+              {editorTextSizes.map(([value, label]) => <option value={value} key={value}>{label}</option>)}
+            </select>
+          </div>
+          <div className="toolbar-group compact-buttons">
+            <button type="button" title="Bold" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("bold")}>B</button>
+            <button type="button" title="Italic" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("italic")}>I</button>
+            <button type="button" title="Underline" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("underline")}>U</button>
+            <button type="button" title="Strike" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("strikeThrough")}>S</button>
+          </div>
+          <div className="toolbar-group compact-buttons">
+            <button type="button" title="Bulleted list" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("insertUnorderedList")}>List</button>
+            <button type="button" title="Numbered list" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("insertOrderedList")}>1.</button>
+            <button type="button" title="Outdent" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("outdent")}>Out</button>
+            <button type="button" title="Indent" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("indent")}>In</button>
+          </div>
+          <div className="toolbar-group compact-buttons">
+            <button type="button" title="Align left" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("justifyLeft")}>Left</button>
+            <button type="button" title="Align center" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("justifyCenter")}>Center</button>
+            <button type="button" title="Align right" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("justifyRight")}>Right</button>
+            <button type="button" title="Justify" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("justifyFull")}>Justify</button>
+          </div>
+          <div className="toolbar-group compact-buttons">
+            <button type="button" title="Insert link" onMouseDown={(event) => event.preventDefault()} onClick={insertLink}>Link</button>
+            <button type="button" title="Divider" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("insertHorizontalRule")}>Line</button>
+            <button type="button" title="Clear formatting" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("removeFormat")}>Clear</button>
+          </div>
+          <div className="toolbar-group">
+            <select defaultValue="1.7" onMouseDown={saveEditorSelection} onChange={(event) => applyLineHeight(event.target.value)} aria-label="Line height">
+              <option value="1.35">Tight</option>
+              <option value="1.7">Normal spacing</option>
+              <option value="2">Relaxed</option>
+            </select>
+            <label className="compact-tool">
+              Text
+              <input type="color" defaultValue="#1f2933" onMouseDown={saveEditorSelection} onChange={(event) => runCommand("foreColor", event.target.value)} />
+            </label>
+            <label className="compact-tool">
+              Highlight
+              <input type="color" defaultValue="#fff3a3" onMouseDown={saveEditorSelection} onChange={(event) => runCommand("backColor", event.target.value)} />
+            </label>
+          </div>
         </div>
         <label>
           Content
+          <div className="editor-workspace">
           <div
             className="rich-editor"
             contentEditable
             data-resource-editor
             ref={editorRef}
             suppressContentEditableWarning
+            spellCheck
             onInput={(event) => {
               setContent(event.currentTarget.innerHTML);
               saveEditorSelection();
             }}
+            onPaste={handleEditorPaste}
             onKeyUp={saveEditorSelection}
             onMouseUp={saveEditorSelection}
           />
+          </div>
         </label>
         <div className="dialog-actions">
           <button className="button secondary" type="button" onClick={close}>Cancel</button>
