@@ -1530,7 +1530,7 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
 
   function applyFontSize(size: string) {
     setFontSize(size);
-    applyInlineStyle({ fontSize: `${size}px`, lineHeight: "1.28" });
+    applyInlineStyle({ fontSize: `${size}px`, lineHeight: "1.16" });
   }
 
   function applyFontFamily(family: string) {
@@ -1541,7 +1541,7 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
   function applyBlockStyle(style: string) {
     setBlockStyle(style);
     const tagName = style === "title" ? "h1" : style === "heading" ? "h2" : "p";
-    const size = style === "title" ? "50" : style === "heading" ? "25" : "16";
+    const size = style === "title" ? "50" : style === "heading" ? "22" : "16";
     runCommand("formatBlock", tagName);
     applyFontSize(size);
   }

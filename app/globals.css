@@ -1932,7 +1932,7 @@ h3 {
   background: #fff;
   color: var(--ink);
   padding: clamp(32px, 5vw, 58px);
-  line-height: 1.28;
+  line-height: 1.16;
   outline: none;
   overflow: auto;
   box-shadow: 0 14px 36px rgba(31, 41, 51, 0.08);
@@ -1961,10 +1961,10 @@ h3 {
 
 .rich-editor h2,
 .reader-content h2 {
-  margin: 12px 0 5px;
+  margin: 8px 0 3px;
   color: var(--ink);
-  font-size: 25px;
-  line-height: 1.12;
+  font-size: 22px;
+  line-height: 1.08;
 }
 
 .rich-editor h3,
@@ -1981,18 +1981,18 @@ h3 {
 .reader-content p {
   min-height: 1.28em;
   font-size: 16px;
-  margin: 0 0 4px !important;
-  line-height: 1.28 !important;
+  margin: 0 0 2px !important;
+  line-height: 1.16 !important;
 }
 
 .rich-editor > *,
 .reader-content > * {
-  margin-block: 0 5px !important;
+  margin-block: 0 3px !important;
 }
 
 .rich-editor br,
 .reader-content br {
-  line-height: 1.28;
+  line-height: 1.16;
 }
 
 .document-preview {
