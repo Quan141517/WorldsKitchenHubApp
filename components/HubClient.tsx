@@ -1452,6 +1452,7 @@ function normalizeDocumentHtml(html: string) {
   return html
     .replace(/\u200B/g, "")
     .replace(/line-height\s*:\s*[^;"']+;?/gi, "")
+    .replace(/<(p|div)([^>]*)>(?:\s|&nbsp;|<br\s*\/?>)*<\/\1>/gi, "")
     .replace(/\sstyle="(?:\s*)"/gi, "");
 }
 

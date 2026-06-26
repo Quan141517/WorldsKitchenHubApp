@@ -1979,20 +1979,30 @@ h3 {
 .reader-content div,
 .rich-editor p,
 .reader-content p {
-  min-height: 1.28em;
+  min-height: 0;
   font-size: 16px;
-  margin: 0 0 2px !important;
-  line-height: 1.16 !important;
+  margin: 0 !important;
+  line-height: 1.08 !important;
 }
 
 .rich-editor > *,
 .reader-content > * {
-  margin-block: 0 3px !important;
+  margin-block: 0 !important;
+}
+
+.rich-editor p:empty,
+.rich-editor div:empty,
+.reader-content p:empty,
+.reader-content div:empty {
+  min-height: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  line-height: 0 !important;
 }
 
 .rich-editor br,
 .reader-content br {
-  line-height: 1.16;
+  line-height: 1.08;
 }
 
 .document-preview {
