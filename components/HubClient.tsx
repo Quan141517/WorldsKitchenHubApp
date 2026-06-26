@@ -1464,10 +1464,13 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
   const [blockStyle, setBlockStyle] = useState("p");
   const [fontFamily, setFontFamily] = useState<string>(editorFonts[0][0]);
   const [fontSize, setFontSize] = useState("1rem");
+  const [editorMode, setEditorMode] = useState<"edit" | "preview">("edit");
   const editorRef = useRef<HTMLDivElement | null>(null);
   const editorSelectionRef = useRef<Range | null>(null);
 
   useEffect(() => {
+    document.execCommand("defaultParagraphSeparator", false, "p");
+    document.execCommand("styleWithCSS", false, "true");
     if (editorRef.current) editorRef.current.innerHTML = content;
     // Only seed the contentEditable when this editor instance opens.
     // Updating it on every keystroke resets the caret position.
@@ -1564,15 +1567,6 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
     saveEditorSelection();
   }
 
-  function handleEditorKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
-    if (event.key !== "Enter") return;
-    event.preventDefault();
-    restoreEditorSelection();
-    document.execCommand("insertHTML", false, "<br>");
-    if (editorRef.current) setContent(editorRef.current.innerHTML);
-    saveEditorSelection();
-  }
-
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     const currentContent = (editorRef.current?.innerHTML || content).replace(/\u200B/g, "");
@@ -1590,6 +1584,11 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
     save(category.id, nextResource);
   }
 
+  const currentHtml = editorRef.current?.innerHTML || content;
+  const plainText = currentHtml.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  const wordCount = plainText ? plainText.split(/\s+/).length : 0;
+  const characterCount = plainText.length;
+
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && close()}>
       <form className="editor-modal" onSubmit={handleSubmit}>
@@ -1600,26 +1599,42 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
           </div>
           <button className="icon-button" type="button" onClick={close}>x</button>
         </div>
-        <div className="editor-meta-grid">
-          <label>
-            Title
-            <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Resource title" />
-          </label>
-          <label>
-            Status
-            <select value={status} onChange={(event) => setStatus(event.target.value as Resource["status"])}>
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-            </select>
-          </label>
-          <label>
-            Preview card color
-            <select value={accentColor} onChange={(event) => setAccentColor(event.target.value)}>
-              {cardAccentOptions.map(([value, label]) => <option value={value} key={value || "neutral"}>{label}</option>)}
-            </select>
-          </label>
+        <div className="document-editor-frame">
+          <div className="document-editor-titlebar">
+            <label className="document-title-field">
+              <span>Document title</span>
+              <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Untitled document" />
+            </label>
+            <div className="document-editor-meta">
+              <label>
+                Status
+                <select value={status} onChange={(event) => setStatus(event.target.value as Resource["status"])}>
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                </select>
+              </label>
+              <label>
+                Card color
+                <select value={accentColor} onChange={(event) => setAccentColor(event.target.value)}>
+                  {cardAccentOptions.map(([value, label]) => <option value={value} key={value || "neutral"}>{label}</option>)}
+                </select>
+              </label>
+            </div>
+          </div>
+          <div className="document-editor-status">
+            <span>{wordCount} words</span>
+            <span>{characterCount} characters</span>
+            <span>{status === "published" ? "Visible when saved" : "Draft only"}</span>
+          </div>
+          <div className="editor-mode-tabs" role="tablist" aria-label="Editor mode">
+            <button className={editorMode === "edit" ? "active" : ""} type="button" onClick={() => setEditorMode("edit")}>Edit</button>
+            <button className={editorMode === "preview" ? "active" : ""} type="button" onClick={() => {
+              if (editorRef.current) setContent(editorRef.current.innerHTML);
+              setEditorMode("preview");
+            }}>Preview</button>
+          </div>
         </div>
-        <div className="format-toolbar" aria-label="Formatting tools">
+        {editorMode === "edit" ? <div className="format-toolbar" aria-label="Formatting tools">
           <div className="toolbar-group">
             <select value={blockStyle} onMouseDown={saveEditorSelection} onChange={(event) => {
               setBlockStyle(event.target.value);
@@ -1677,10 +1692,11 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
               <input type="color" defaultValue="#fff3a3" onMouseDown={saveEditorSelection} onChange={(event) => runCommand("backColor", event.target.value)} />
             </label>
           </div>
-        </div>
-        <label>
-          Content
-          <div className="editor-workspace">
+        </div> : null}
+        <div className="editor-workspace">
+          {editorMode === "preview" ? (
+            <article className="rich-editor document-preview" dangerouslySetInnerHTML={{ __html: currentHtml }} />
+          ) : (
           <div
             className="rich-editor"
             contentEditable
@@ -1693,12 +1709,11 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
               saveEditorSelection();
             }}
             onPaste={handleEditorPaste}
-            onKeyDown={handleEditorKeyDown}
             onKeyUp={saveEditorSelection}
             onMouseUp={saveEditorSelection}
           />
-          </div>
-        </label>
+          )}
+        </div>
         <div className="dialog-actions">
           <button className="button secondary" type="button" onClick={close}>Cancel</button>
           <button className="button primary" type="submit">Save Resource</button>
