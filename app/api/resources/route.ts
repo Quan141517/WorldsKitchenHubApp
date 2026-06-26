@@ -4,6 +4,8 @@ import { getSession } from "@/lib/session";
 import { filterHubDataForSession } from "@/lib/visibility";
 import type { Resource } from "@/lib/mock-data";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: NextRequest) {
   const session = await getSession();
 

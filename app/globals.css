@@ -2,16 +2,21 @@
 
 :root {
   color-scheme: light;
-  --bg: #f7f4ee;
+  --bg: #eaf8ff;
   --panel: #ffffff;
-  --ink: #1f2933;
-  --muted: #667085;
-  --line: #ded7cc;
-  --accent: #0f766e;
-  --accent-strong: #115e59;
-  --gold: #b88728;
+  --ink: #17324d;
+  --muted: #5f7891;
+  --line: #b8dddf;
+  --accent: #18a983;
+  --accent-strong: #0b8268;
+  --gold: #b88b47;
+  --sky: #56bdf7;
+  --sky-strong: #2389d6;
+  --leaf: #45c96f;
+  --wood: #caa06c;
+  --cream: #fff9ee;
   --danger: #a33a2f;
-  --shadow: 0 16px 45px rgba(31, 41, 51, 0.12);
+  --shadow: 0 18px 0 rgba(42, 123, 150, 0.08), 0 24px 52px rgba(35, 137, 214, 0.16);
 }
 
 * {
@@ -21,7 +26,11 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--bg);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.64) 25%, transparent 25%) 0 0 / 34px 34px,
+    linear-gradient(225deg, rgba(255, 255, 255, 0.45) 25%, transparent 25%) 0 0 / 34px 34px,
+    linear-gradient(135deg, #dff5ff 0%, #edfbed 48%, #fff4df 100%);
+  background-attachment: fixed;
   color: var(--ink);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -2140,6 +2149,286 @@ h3 {
 
 .server-log-toolbar .button.primary {
   min-width: 180px;
+}
+
+/* Playful game-style theme layer. Keep this near the end so older panels inherit the new mood. */
+.sidebar {
+  border-right: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(232, 248, 255, 0.95)),
+    repeating-linear-gradient(135deg, rgba(86, 189, 247, 0.12) 0 11px, rgba(69, 201, 111, 0.1) 11px 22px);
+  box-shadow: 12px 0 34px rgba(35, 137, 214, 0.13);
+}
+
+.brand {
+  border: 2px solid rgba(86, 189, 247, 0.45);
+  border-bottom-color: rgba(202, 160, 108, 0.55);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #ffffff 0%, #e3f8ff 52%, #fff2d6 100%);
+  padding: 12px;
+  box-shadow: 0 6px 0 rgba(202, 160, 108, 0.18), 0 18px 32px rgba(35, 137, 214, 0.12);
+}
+
+.brand h1,
+.home-hero h2 {
+  color: #1674b9;
+  font-family: "Luckiest Guy", Inter, ui-sans-serif, system-ui, sans-serif;
+  font-weight: 400;
+  text-shadow: 0 3px 0 rgba(255, 255, 255, 0.85), 0 5px 0 rgba(69, 201, 111, 0.14);
+}
+
+.eyebrow {
+  color: #b67a18;
+}
+
+.category-button,
+.sidebar-button,
+.button {
+  border: 2px solid rgba(86, 189, 247, 0.38);
+  background: linear-gradient(180deg, #ffffff 0%, #f4fcff 100%);
+  box-shadow: 0 4px 0 rgba(35, 137, 214, 0.12);
+}
+
+.category-button:hover,
+.sidebar-button:hover,
+.button:hover {
+  border-color: rgba(69, 201, 111, 0.7);
+  box-shadow: 0 6px 0 rgba(11, 130, 104, 0.13), 0 14px 26px rgba(35, 137, 214, 0.13);
+  transform: translateY(-2px);
+}
+
+.category-button.active,
+.sidebar-button.active,
+.sidebar-button.activity,
+.editor-mode-tabs button.active,
+.activity-tabs button.active {
+  border-color: rgba(24, 169, 131, 0.75);
+  background: linear-gradient(135deg, #dff9ed 0%, #e1f7ff 100%);
+  color: #0b8268;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.86), 0 4px 0 rgba(11, 130, 104, 0.14);
+}
+
+.button.primary,
+.resource-button.primary {
+  border-color: #0b8268;
+  background: linear-gradient(135deg, #45c96f 0%, #18a983 58%, #0b8268 100%);
+  color: #fff;
+  box-shadow: 0 5px 0 #08705c, 0 16px 30px rgba(24, 169, 131, 0.22);
+}
+
+.button.secondary {
+  border-color: rgba(202, 160, 108, 0.45);
+  background: linear-gradient(180deg, #ffffff 0%, #fff7e9 100%);
+}
+
+select,
+input,
+textarea {
+  border: 2px solid rgba(86, 189, 247, 0.3);
+  background: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+select:focus,
+input:focus,
+textarea:focus,
+.rich-editor:focus {
+  border-color: rgba(24, 169, 131, 0.78);
+  box-shadow: 0 0 0 4px rgba(86, 189, 247, 0.18);
+  outline: none;
+}
+
+.main-content {
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.36) 1px, transparent 1px) 0 0 / 42px 42px,
+    linear-gradient(0deg, rgba(255, 255, 255, 0.3) 1px, transparent 1px) 0 0 / 42px 42px;
+}
+
+.topbar {
+  border: 2px solid rgba(255, 255, 255, 0.72);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 10px 12px;
+  box-shadow: 0 12px 28px rgba(35, 137, 214, 0.1);
+  backdrop-filter: blur(12px);
+}
+
+.workspace,
+.home-view,
+.document-editor-frame,
+.editor-workspace,
+.announcement-modal,
+.profile-popover,
+.dialog,
+.admin-panel,
+.log-panel {
+  border: 2px solid rgba(86, 189, 247, 0.28);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 8px 0 rgba(202, 160, 108, 0.1), 0 26px 56px rgba(35, 137, 214, 0.15);
+}
+
+.home-hero {
+  position: relative;
+  overflow: hidden;
+  border: 2px solid rgba(86, 189, 247, 0.5);
+  background:
+    linear-gradient(135deg, #dbf7ff 0%, #e5ffe9 48%, #fff1d2 100%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.34) 0 12px, transparent 12px 24px);
+  color: #17324d;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.7), 0 8px 0 rgba(202, 160, 108, 0.18);
+}
+
+.home-hero h2 {
+  font-size: clamp(2rem, 4vw, 3.55rem);
+  letter-spacing: 0;
+}
+
+.home-hero p:last-child {
+  color: #3d5c6f;
+  font-weight: 550;
+}
+
+.announcement-card,
+.resource-card,
+.quick-link-card,
+.metric-card,
+.leaderboard-card,
+.slot-card,
+.server-log-card,
+.week-cell,
+.admin-grant-row,
+.link-manager-row,
+.role-checklist {
+  border: 2px solid rgba(86, 189, 247, 0.28);
+  background: linear-gradient(180deg, #ffffff 0%, #f5fcff 100%);
+  box-shadow: 0 5px 0 rgba(35, 137, 214, 0.09), 0 16px 28px rgba(23, 50, 77, 0.08);
+}
+
+.announcement-card {
+  border-left: 8px solid #45c96f;
+  background:
+    linear-gradient(90deg, rgba(226, 255, 235, 0.92), rgba(255, 255, 255, 0.98)),
+    repeating-linear-gradient(135deg, rgba(86, 189, 247, 0.08) 0 10px, transparent 10px 20px);
+  box-shadow: 0 6px 0 rgba(69, 201, 111, 0.14), 0 18px 34px rgba(35, 137, 214, 0.12);
+}
+
+.announcement-card::before {
+  color: #0b8268;
+}
+
+.announcement-card:hover,
+.announcement-card:focus-visible,
+.resource-card:hover,
+.quick-link-card:hover,
+.slot-card:hover,
+.server-log-card:hover,
+.week-cell:hover,
+.admin-grant-row:hover,
+.leaderboard-card:hover {
+  border-color: rgba(69, 201, 111, 0.62);
+  box-shadow: 0 7px 0 rgba(11, 130, 104, 0.12), 0 22px 38px rgba(35, 137, 214, 0.16);
+  transform: translateY(-3px);
+}
+
+.resource-button {
+  border: 2px solid rgba(86, 189, 247, 0.3);
+  border-left: 8px solid rgba(35, 137, 214, 0.46);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(234, 248, 255, 0.96)),
+    repeating-linear-gradient(45deg, rgba(69, 201, 111, 0.07) 0 12px, transparent 12px 24px);
+  box-shadow: 0 5px 0 rgba(35, 137, 214, 0.1);
+}
+
+.resource-button::before,
+.resource-button::after {
+  display: none;
+}
+
+.resource-button:hover {
+  border-color: rgba(69, 201, 111, 0.64);
+  border-left-color: #45c96f;
+  transform: translateY(-2px);
+}
+
+.status-pill,
+.role-pill,
+.document-editor-status,
+.leaderboard-badge,
+.week-pill {
+  border: 1px solid rgba(69, 201, 111, 0.35);
+  background: linear-gradient(135deg, #e3fff0 0%, #dff7ff 100%);
+  color: #0b8268;
+}
+
+.metric-card strong,
+.leaderboard-card strong,
+.week-metric strong {
+  color: #1674b9;
+}
+
+.rich-editor,
+.reader-content {
+  background: #fffefb;
+}
+
+.login-shell {
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.34) 1px, transparent 1px) 0 0 / 46px 46px,
+    linear-gradient(0deg, rgba(255, 255, 255, 0.28) 1px, transparent 1px) 0 0 / 46px 46px;
+}
+
+.login-shell .main-content {
+  display: grid;
+  align-items: start;
+  padding-top: clamp(24px, 5vw, 54px);
+}
+
+.login-card {
+  position: relative;
+  overflow: hidden;
+  max-width: 910px;
+  border-color: rgba(86, 189, 247, 0.52);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(230, 249, 255, 0.96) 47%, rgba(255, 245, 224, 0.98) 100%),
+    repeating-linear-gradient(45deg, rgba(69, 201, 111, 0.08) 0 14px, transparent 14px 28px);
+  box-shadow: 0 9px 0 rgba(202, 160, 108, 0.18), 0 32px 58px rgba(35, 137, 214, 0.16);
+}
+
+.login-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(135deg, transparent 0 42%, rgba(69, 201, 111, 0.13) 42% 46%, transparent 46% 100%),
+    linear-gradient(45deg, transparent 0 62%, rgba(86, 189, 247, 0.14) 62% 66%, transparent 66% 100%);
+}
+
+.login-card > * {
+  position: relative;
+}
+
+.login-card h2 {
+  color: #1674b9;
+  font-family: "Luckiest Guy", Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  font-weight: 400;
+  text-shadow: 0 3px 0 rgba(255, 255, 255, 0.82), 0 5px 0 rgba(69, 201, 111, 0.13);
+}
+
+.login-card .muted {
+  max-width: 640px;
+  color: #45677d;
+  font-size: 1rem;
+  font-weight: 550;
+}
+
+.login-card .button.primary {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 12px;
+  padding: 13px 18px;
+  font-size: 1rem;
 }
 
 @media (max-width: 860px) {

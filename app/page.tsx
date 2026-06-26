@@ -10,7 +10,7 @@ export default async function HomePage() {
 
   if (!session) {
     return (
-      <main className="app-shell">
+      <main className="app-shell login-shell">
         <aside className="sidebar">
           <div className="brand">
             <Image className="brand-logo" src="/assets/worlds-kitchen-logo.png" alt="World's Kitchen logo" width={48} height={48} />
@@ -21,7 +21,7 @@ export default async function HomePage() {
           </div>
         </aside>
         <section className="main-content">
-          <div className="workspace">
+          <div className="workspace login-card">
             <p className="eyebrow">Roblox Login</p>
             <h2>Sign in to access the Hub.</h2>
             <p className="muted">Your Roblox account is used to detect your group rank and show only the resources you can access.</p>
