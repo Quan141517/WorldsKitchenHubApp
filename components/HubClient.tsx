@@ -195,14 +195,6 @@ const editorFonts = [
   ['"Courier New", Courier, monospace', "Courier"],
 ] as const;
 
-const editorTextSizes = [
-  ["0.86rem", "Small"],
-  ["1rem", "Normal"],
-  ["1.15rem", "Large"],
-  ["1.35rem", "Title"],
-  ["1.7rem", "Display"],
-] as const;
-
 const robloxRankRanges: Array<{ roleId: StaffRoleId; min: number; max: number }> = [
   { roleId: "worlds-kitchen-team", min: 5, max: 20 },
   { roleId: "supervision-team", min: 25, max: 40 },
@@ -1463,8 +1455,7 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
   const [accentColor, setAccentColor] = useState(resource?.accentColor || "");
   const [blockStyle, setBlockStyle] = useState("p");
   const [fontFamily, setFontFamily] = useState<string>(editorFonts[0][0]);
-  const [fontSize, setFontSize] = useState("1rem");
-  const [editorMode, setEditorMode] = useState<"edit" | "preview">("edit");
+  const [fontSize, setFontSize] = useState("11");
   const editorRef = useRef<HTMLDivElement | null>(null);
   const editorSelectionRef = useRef<Range | null>(null);
 
@@ -1532,7 +1523,7 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
 
   function applyFontSize(size: string) {
     setFontSize(size);
-    applyInlineStyle({ fontSize: size });
+    applyInlineStyle({ fontSize: `${size}px` });
   }
 
   function applyFontFamily(family: string) {
@@ -1540,8 +1531,12 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
     applyInlineStyle({ fontFamily: family });
   }
 
-  function applyLineHeight(lineHeight: string) {
-    applyInlineStyle({ lineHeight });
+  function applyBlockStyle(style: string) {
+    setBlockStyle(style);
+    const tagName = style === "title" ? "h1" : style === "heading" ? "h2" : "p";
+    const size = style === "title" ? "26" : style === "heading" ? "18" : "11";
+    runCommand("formatBlock", tagName);
+    applyFontSize(size);
   }
 
   function insertLink() {
@@ -1626,33 +1621,18 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
             <span>{characterCount} characters</span>
             <span>{status === "published" ? "Visible when saved" : "Draft only"}</span>
           </div>
-          <div className="editor-mode-tabs" role="tablist" aria-label="Editor mode">
-            <button className={editorMode === "edit" ? "active" : ""} type="button" onClick={() => setEditorMode("edit")}>Edit</button>
-            <button className={editorMode === "preview" ? "active" : ""} type="button" onClick={() => {
-              if (editorRef.current) setContent(editorRef.current.innerHTML);
-              setEditorMode("preview");
-            }}>Preview</button>
-          </div>
         </div>
-        {editorMode === "edit" ? <div className="format-toolbar" aria-label="Formatting tools">
+        <div className="format-toolbar" aria-label="Formatting tools">
           <div className="toolbar-group">
-            <select value={blockStyle} onMouseDown={saveEditorSelection} onChange={(event) => {
-              setBlockStyle(event.target.value);
-              runCommand("formatBlock", event.target.value);
-            }} aria-label="Paragraph style">
-              <option value="p">Normal text</option>
-              <option value="h1">Heading 1</option>
-              <option value="h2">Heading 2</option>
-              <option value="h3">Heading 3</option>
-              <option value="blockquote">Quote</option>
-              <option value="pre">Code block</option>
+            <select value={blockStyle} onMouseDown={saveEditorSelection} onChange={(event) => applyBlockStyle(event.target.value)} aria-label="Paragraph style">
+              <option value="title">Title</option>
+              <option value="heading">Heading</option>
+              <option value="p">Normal</option>
             </select>
             <select value={fontFamily} onMouseDown={saveEditorSelection} onChange={(event) => applyFontFamily(event.target.value)} aria-label="Font family">
               {editorFonts.map(([value, label]) => <option value={value} key={value}>{label}</option>)}
             </select>
-            <select value={fontSize} onMouseDown={saveEditorSelection} onChange={(event) => applyFontSize(event.target.value)} aria-label="Text size">
-              {editorTextSizes.map(([value, label]) => <option value={value} key={value}>{label}</option>)}
-            </select>
+            <input className="font-size-input" type="number" min="6" max="72" step="1" value={fontSize} onMouseDown={saveEditorSelection} onChange={(event) => applyFontSize(event.target.value || "11")} aria-label="Font size" />
           </div>
           <div className="toolbar-group compact-buttons">
             <button type="button" title="Bold" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("bold")}>B</button>
@@ -1678,11 +1658,7 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
             <button type="button" title="Clear formatting" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("removeFormat")}>Clear</button>
           </div>
           <div className="toolbar-group">
-            <select defaultValue="1.18" onMouseDown={saveEditorSelection} onChange={(event) => applyLineHeight(event.target.value)} aria-label="Line height">
-              <option value="1.05">Tight</option>
-              <option value="1.18">Normal spacing</option>
-              <option value="1.35">Relaxed</option>
-            </select>
+            <span className="spacing-status">Normal spacing</span>
             <label className="compact-tool">
               Text
               <input type="color" defaultValue="#1f2933" onMouseDown={saveEditorSelection} onChange={(event) => runCommand("foreColor", event.target.value)} />
@@ -1692,11 +1668,8 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
               <input type="color" defaultValue="#fff3a3" onMouseDown={saveEditorSelection} onChange={(event) => runCommand("backColor", event.target.value)} />
             </label>
           </div>
-        </div> : null}
+        </div>
         <div className="editor-workspace">
-          {editorMode === "preview" ? (
-            <article className="rich-editor document-preview" dangerouslySetInnerHTML={{ __html: currentHtml }} />
-          ) : (
           <div
             className="rich-editor"
             contentEditable
@@ -1712,7 +1685,6 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
             onKeyUp={saveEditorSelection}
             onMouseUp={saveEditorSelection}
           />
-          )}
         </div>
         <div className="dialog-actions">
           <button className="button secondary" type="button" onClick={close}>Cancel</button>

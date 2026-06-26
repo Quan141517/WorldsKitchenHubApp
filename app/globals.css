@@ -1872,6 +1872,26 @@ h3 {
   min-width: 150px;
 }
 
+.font-size-input {
+  width: 72px;
+  min-width: 72px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.spacing-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--muted);
+  padding: 0 11px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
 .compact-buttons button {
   min-width: 38px;
   padding: 9px 11px;
