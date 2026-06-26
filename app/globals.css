@@ -1979,25 +1979,27 @@ h3 {
 .reader-content div,
 .rich-editor p,
 .reader-content p {
-  min-height: 0;
+  min-height: 1.08em;
   font-size: 16px;
-  margin: 0 !important;
+  margin: 0 0 3px !important;
   line-height: 1.08 !important;
 }
 
 .rich-editor > *,
 .reader-content > * {
-  margin-block: 0 !important;
+  margin-block: 0 3px !important;
 }
 
+.rich-editor .doc-spacer,
+.reader-content .doc-spacer,
 .rich-editor p:empty,
 .rich-editor div:empty,
 .reader-content p:empty,
 .reader-content div:empty {
-  min-height: 0 !important;
-  height: 0 !important;
+  min-height: 0.55em !important;
+  height: 0.55em !important;
   margin: 0 !important;
-  line-height: 0 !important;
+  line-height: 0.55em !important;
 }
 
 .rich-editor br,
