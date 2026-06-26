@@ -1448,6 +1448,13 @@ function ReaderView({ categoryName, resource, role, adminPermissions, backToCate
   );
 }
 
+function normalizeDocumentHtml(html: string) {
+  return html
+    .replace(/\u200B/g, "")
+    .replace(/line-height\s*:\s*[^;"']+;?/gi, "")
+    .replace(/\sstyle="(?:\s*)"/gi, "");
+}
+
 function ResourceEditor({ category, resource, close, save }: { category: Category; resource?: Resource; close: () => void; save: (categoryId: string, resource: Resource) => void }) {
   const [title, setTitle] = useState(resource?.title || "");
   const [status, setStatus] = useState<Resource["status"]>(resource?.status || "draft");
@@ -1455,14 +1462,14 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
   const [accentColor, setAccentColor] = useState(resource?.accentColor || "");
   const [blockStyle, setBlockStyle] = useState("p");
   const [fontFamily, setFontFamily] = useState<string>(editorFonts[0][0]);
-  const [fontSize, setFontSize] = useState("11");
+  const [fontSize, setFontSize] = useState("16");
   const editorRef = useRef<HTMLDivElement | null>(null);
   const editorSelectionRef = useRef<Range | null>(null);
 
   useEffect(() => {
     document.execCommand("defaultParagraphSeparator", false, "p");
     document.execCommand("styleWithCSS", false, "true");
-    if (editorRef.current) editorRef.current.innerHTML = content;
+    if (editorRef.current) editorRef.current.innerHTML = normalizeDocumentHtml(content);
     // Only seed the contentEditable when this editor instance opens.
     // Updating it on every keystroke resets the caret position.
   }, []);
@@ -1470,7 +1477,7 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
   function runCommand(command: string, value?: string) {
     restoreEditorSelection();
     document.execCommand(command, false, value);
-    if (editorRef.current) setContent(editorRef.current.innerHTML);
+    if (editorRef.current) setContent(normalizeDocumentHtml(editorRef.current.innerHTML));
     saveEditorSelection();
   }
 
@@ -1518,12 +1525,12 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
     }
 
     editorSelectionRef.current = selection.getRangeAt(0).cloneRange();
-    setContent(editorRef.current.innerHTML);
+    setContent(normalizeDocumentHtml(editorRef.current.innerHTML));
   }
 
   function applyFontSize(size: string) {
     setFontSize(size);
-    applyInlineStyle({ fontSize: `${size}px` });
+    applyInlineStyle({ fontSize: `${size}px`, lineHeight: "1.28" });
   }
 
   function applyFontFamily(family: string) {
@@ -1534,7 +1541,7 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
   function applyBlockStyle(style: string) {
     setBlockStyle(style);
     const tagName = style === "title" ? "h1" : style === "heading" ? "h2" : "p";
-    const size = style === "title" ? "26" : style === "heading" ? "18" : "11";
+    const size = style === "title" ? "50" : style === "heading" ? "25" : "16";
     runCommand("formatBlock", tagName);
     applyFontSize(size);
   }
@@ -1558,13 +1565,13 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
           .replace(/\sstyle="[^"]*"/gi, "")
       : text.split(/\n{2,}/).map((paragraph) => `<p>${paragraph.replace(/\n/g, "<br>")}</p>`).join("");
     document.execCommand("insertHTML", false, cleanedHtml);
-    if (editorRef.current) setContent(editorRef.current.innerHTML);
+    if (editorRef.current) setContent(normalizeDocumentHtml(editorRef.current.innerHTML));
     saveEditorSelection();
   }
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    const currentContent = (editorRef.current?.innerHTML || content).replace(/\u200B/g, "");
+    const currentContent = normalizeDocumentHtml(editorRef.current?.innerHTML || content);
     const plainText = currentContent.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
     const nextResource: Resource = {
       id: resource?.id || title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `resource-${Date.now()}`,
@@ -1632,7 +1639,7 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
             <select value={fontFamily} onMouseDown={saveEditorSelection} onChange={(event) => applyFontFamily(event.target.value)} aria-label="Font family">
               {editorFonts.map(([value, label]) => <option value={value} key={value}>{label}</option>)}
             </select>
-            <input className="font-size-input" type="number" min="6" max="72" step="1" value={fontSize} onMouseDown={saveEditorSelection} onChange={(event) => applyFontSize(event.target.value || "11")} aria-label="Font size" />
+            <input className="font-size-input" type="number" min="6" max="72" step="1" value={fontSize} onMouseDown={saveEditorSelection} onChange={(event) => applyFontSize(event.target.value || "16")} aria-label="Font size" />
           </div>
           <div className="toolbar-group compact-buttons">
             <button type="button" title="Bold" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("bold")}>B</button>
@@ -1665,7 +1672,7 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
             </label>
             <label className="compact-tool">
               Highlight
-              <input type="color" defaultValue="#fff3a3" onMouseDown={saveEditorSelection} onChange={(event) => runCommand("backColor", event.target.value)} />
+              <input type="color" defaultValue="#b8f3d4" onMouseDown={saveEditorSelection} onChange={(event) => runCommand("backColor", event.target.value)} />
             </label>
           </div>
         </div>
@@ -1678,7 +1685,7 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
             suppressContentEditableWarning
             spellCheck
             onInput={(event) => {
-              setContent(event.currentTarget.innerHTML);
+              setContent(normalizeDocumentHtml(event.currentTarget.innerHTML));
               saveEditorSelection();
             }}
             onPaste={handleEditorPaste}
