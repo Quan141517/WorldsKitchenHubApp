@@ -16,7 +16,7 @@
   --wood: #caa06c;
   --cream: #fff9ee;
   --danger: #a33a2f;
-  --shadow: 0 18px 0 rgba(42, 123, 150, 0.08), 0 24px 52px rgba(35, 137, 214, 0.16);
+  --shadow: 0 20px 45px rgba(35, 137, 214, 0.12);
 }
 
 * {
@@ -27,9 +27,8 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.64) 25%, transparent 25%) 0 0 / 34px 34px,
-    linear-gradient(225deg, rgba(255, 255, 255, 0.45) 25%, transparent 25%) 0 0 / 34px 34px,
-    linear-gradient(135deg, #dff5ff 0%, #edfbed 48%, #fff4df 100%);
+    linear-gradient(135deg, rgba(255, 255, 255, 0.78) 0%, rgba(234, 248, 255, 0.76) 42%, rgba(255, 247, 234, 0.82) 100%),
+    linear-gradient(180deg, #eaf8ff 0%, #f8fbf4 100%);
   background-attachment: fixed;
   color: var(--ink);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -2429,6 +2428,167 @@ textarea:focus,
   margin-top: 12px;
   padding: 13px 18px;
   font-size: 1rem;
+}
+
+/* Balanced theme pass: brighter than the original, calmer than the game-style draft. */
+.sidebar {
+  border-right: 1px solid rgba(127, 178, 190, 0.32);
+  background: linear-gradient(180deg, rgba(248, 253, 255, 0.97), rgba(243, 250, 246, 0.96));
+  box-shadow: 8px 0 28px rgba(35, 137, 214, 0.08);
+}
+
+.brand {
+  border: 1px solid rgba(86, 189, 247, 0.35);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 12px 24px rgba(23, 50, 77, 0.08);
+}
+
+.brand h1,
+.home-hero h2,
+.login-card h2 {
+  color: #1a5f8f;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 800;
+  text-shadow: none;
+}
+
+.eyebrow {
+  color: #aa7626;
+}
+
+.category-button,
+.sidebar-button,
+.button {
+  border: 1px solid rgba(127, 178, 190, 0.48);
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 8px 18px rgba(23, 50, 77, 0.06);
+}
+
+.category-button:hover,
+.sidebar-button:hover,
+.button:hover {
+  border-color: rgba(24, 169, 131, 0.52);
+  box-shadow: 0 12px 24px rgba(35, 137, 214, 0.1);
+  transform: translateY(-1px);
+}
+
+.category-button.active,
+.sidebar-button.active,
+.sidebar-button.activity,
+.editor-mode-tabs button.active,
+.activity-tabs button.active {
+  border-color: rgba(24, 169, 131, 0.52);
+  background: linear-gradient(135deg, rgba(224, 249, 238, 0.92), rgba(227, 247, 255, 0.92));
+  color: #0b7662;
+  box-shadow: 0 10px 22px rgba(24, 169, 131, 0.09);
+}
+
+.button.primary,
+.resource-button.primary {
+  border-color: #14876f;
+  background: linear-gradient(135deg, #27b982, #11876f);
+  box-shadow: 0 12px 24px rgba(24, 169, 131, 0.18);
+}
+
+.main-content {
+  background: linear-gradient(135deg, rgba(235, 249, 255, 0.42), rgba(255, 249, 238, 0.4));
+}
+
+.topbar {
+  border: 1px solid rgba(127, 178, 190, 0.34);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 14px 28px rgba(23, 50, 77, 0.08);
+}
+
+.workspace,
+.home-view,
+.document-editor-frame,
+.editor-workspace,
+.announcement-modal,
+.profile-popover,
+.dialog,
+.admin-panel,
+.log-panel {
+  border: 1px solid rgba(127, 178, 190, 0.34);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 20px 45px rgba(23, 50, 77, 0.1);
+}
+
+.home-hero {
+  border: 1px solid rgba(86, 189, 247, 0.42);
+  background: linear-gradient(135deg, #e2f7ff 0%, #ecfbef 55%, #fff4df 100%);
+  box-shadow: 0 18px 38px rgba(35, 137, 214, 0.11);
+}
+
+.home-hero h2 {
+  font-size: clamp(1.75rem, 3vw, 2.7rem);
+}
+
+.announcement-card,
+.resource-card,
+.quick-link-card,
+.metric-card,
+.leaderboard-card,
+.slot-card,
+.server-log-card,
+.week-cell,
+.admin-grant-row,
+.link-manager-row,
+.role-checklist {
+  border: 1px solid rgba(127, 178, 190, 0.32);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 14px 28px rgba(23, 50, 77, 0.07);
+}
+
+.announcement-card {
+  border-left: 5px solid #27b982;
+  background: linear-gradient(90deg, rgba(237, 252, 244, 0.96), rgba(255, 255, 255, 0.98));
+  box-shadow: 0 16px 30px rgba(23, 50, 77, 0.08);
+}
+
+.announcement-card:hover,
+.announcement-card:focus-visible,
+.resource-card:hover,
+.quick-link-card:hover,
+.slot-card:hover,
+.server-log-card:hover,
+.week-cell:hover,
+.admin-grant-row:hover,
+.leaderboard-card:hover {
+  border-color: rgba(24, 169, 131, 0.45);
+  box-shadow: 0 18px 34px rgba(35, 137, 214, 0.12);
+  transform: translateY(-2px);
+}
+
+.resource-button {
+  border: 1px solid rgba(127, 178, 190, 0.34);
+  border-left: 5px solid rgba(35, 137, 214, 0.42);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.97), rgba(241, 250, 253, 0.95));
+  box-shadow: 0 12px 24px rgba(23, 50, 77, 0.07);
+}
+
+.resource-button:hover {
+  border-color: rgba(24, 169, 131, 0.45);
+  border-left-color: #27b982;
+  transform: translateY(-1px);
+}
+
+.login-shell {
+  background: linear-gradient(135deg, rgba(235, 249, 255, 0.42), rgba(255, 249, 238, 0.38));
+}
+
+.login-card {
+  border-color: rgba(127, 178, 190, 0.36);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.97), rgba(234, 248, 255, 0.92) 56%, rgba(255, 248, 235, 0.95));
+  box-shadow: 0 22px 46px rgba(23, 50, 77, 0.11);
+}
+
+.login-card::before {
+  display: none;
+}
+
+.login-card h2 {
+  font-size: clamp(1.85rem, 3.2vw, 3rem);
 }
 
 @media (max-width: 860px) {
