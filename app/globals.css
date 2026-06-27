@@ -2591,6 +2591,48 @@ textarea:focus,
   font-size: clamp(1.85rem, 3.2vw, 3rem);
 }
 
+.resource-button.accent-neutral,
+.announcement-card.accent-neutral {
+  border-color: rgba(184, 135, 40, 0.32);
+  border-left-color: rgba(184, 135, 40, 0.58);
+  background: linear-gradient(135deg, #fff6dd 0%, rgba(255, 255, 255, 0.97) 76%);
+}
+
+.resource-button.accent-purple,
+.announcement-card.accent-purple {
+  border-color: rgba(159, 122, 234, 0.45);
+  border-left-color: rgba(129, 94, 214, 0.72);
+  background: linear-gradient(135deg, #ede3ff 0%, rgba(255, 255, 255, 0.97) 76%);
+}
+
+.resource-button.accent-green,
+.announcement-card.accent-green {
+  border-color: rgba(24, 169, 131, 0.42);
+  border-left-color: rgba(24, 169, 131, 0.75);
+  background: linear-gradient(135deg, #e0faec 0%, rgba(255, 255, 255, 0.97) 76%);
+}
+
+.resource-button.accent-blue,
+.announcement-card.accent-blue {
+  border-color: rgba(86, 189, 247, 0.46);
+  border-left-color: rgba(35, 137, 214, 0.74);
+  background: linear-gradient(135deg, #e0f5ff 0%, rgba(255, 255, 255, 0.97) 76%);
+}
+
+.resource-button.accent-gold,
+.announcement-card.accent-gold {
+  border-color: rgba(184, 135, 40, 0.42);
+  border-left-color: rgba(184, 135, 40, 0.78);
+  background: linear-gradient(135deg, #fff0bf 0%, rgba(255, 255, 255, 0.97) 76%);
+}
+
+.resource-button.accent-rose,
+.announcement-card.accent-rose {
+  border-color: rgba(225, 95, 125, 0.38);
+  border-left-color: rgba(202, 72, 105, 0.7);
+  background: linear-gradient(135deg, #ffe2e9 0%, rgba(255, 255, 255, 0.97) 76%);
+}
+
 @media (max-width: 860px) {
   .app-shell {
     grid-template-columns: 1fr;

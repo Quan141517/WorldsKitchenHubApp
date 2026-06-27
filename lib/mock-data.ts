@@ -30,6 +30,8 @@ export type Announcement = {
   status: "draft" | "published";
   accentColor?: string;
   allowedRoleIds: StaffRoleId[];
+  createdBy?: string;
+  createdById?: string;
   deletedAt?: string;
   deletedBy?: string;
 };

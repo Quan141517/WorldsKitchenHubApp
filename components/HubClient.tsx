@@ -239,7 +239,7 @@ export function HubClient({ session: initialSession, initialData }: { session: D
   const [editorState, setEditorState] = useState<{ categoryId: string; resourceId: string | null } | null>(null);
   const [categoryEditorState, setCategoryEditorState] = useState<{ categoryId: string | null } | null>(null);
   const [categoryLinkManagerState, setCategoryLinkManagerState] = useState<{ categoryId: string } | null>(null);
-  const [announcementEditorOpen, setAnnouncementEditorOpen] = useState(false);
+  const [announcementEditorState, setAnnouncementEditorState] = useState<{ announcementId: string | null } | null>(null);
   const [linkManagerOpen, setLinkManagerOpen] = useState(false);
   const visibleCategories = useMemo(() => hubData.categories.filter((category) => !category.deletedAt && canSee(role, category.allowedRoleIds)), [hubData.categories, role]);
   const visibleAnnouncements = useMemo(() => hubData.announcements.filter((announcement) => !announcement.deletedAt && canSee(role, announcement.allowedRoleIds)), [hubData.announcements, role]);
@@ -824,10 +824,11 @@ export function HubClient({ session: initialSession, initialData }: { session: D
             role={role}
             visibleAnnouncements={visibleAnnouncements}
             visibleQuickLinks={visibleQuickLinks}
-            openAnnouncementEditor={() => setAnnouncementEditorOpen(true)}
+            openAnnouncementEditor={(announcementId) => setAnnouncementEditorState({ announcementId: announcementId || null })}
             deleteAnnouncement={deleteAnnouncement}
             openLinkManager={() => setLinkManagerOpen(true)}
             canManageHomeLinks={canViewAdminTools(role) || effectiveAdminPermissionSet.has("manage_home_links")}
+            session={session}
             adminPermissions={effectiveAdminPermissionSet}
           />
         ) : null}
@@ -947,12 +948,14 @@ export function HubClient({ session: initialSession, initialData }: { session: D
           }}
         />
       ) : null}
-      {announcementEditorOpen ? (
+      {announcementEditorState ? (
         <AnnouncementEditor
-          close={() => setAnnouncementEditorOpen(false)}
+          announcement={announcementEditorState.announcementId ? hubData.announcements.find((announcement) => announcement.id === announcementEditorState.announcementId) : undefined}
+          close={() => setAnnouncementEditorState(null)}
           save={async (announcement) => {
-            const response = await fetch("/api/announcements", {
-              method: "POST",
+            const isExisting = Boolean(announcementEditorState.announcementId);
+            const response = await fetch(isExisting ? `/api/announcements/${announcementEditorState.announcementId}` : "/api/announcements", {
+              method: isExisting ? "PATCH" : "POST",
               headers: { "content-type": "application/json" },
               body: JSON.stringify(announcement),
             });
@@ -964,7 +967,7 @@ export function HubClient({ session: initialSession, initialData }: { session: D
 
             const result = (await response.json()) as { data: HubData };
             setHubData(result.data);
-            setAnnouncementEditorOpen(false);
+            setAnnouncementEditorState(null);
             setActiveView("home");
           }}
         />
@@ -1029,18 +1032,22 @@ function HomeView({
   deleteAnnouncement,
   openLinkManager,
   canManageHomeLinks,
+  session,
   adminPermissions,
 }: {
   role: StaffRole | null;
   visibleAnnouncements: HubData["announcements"];
   visibleQuickLinks: QuickLink[];
-  openAnnouncementEditor: () => void;
+  openAnnouncementEditor: (announcementId?: string) => void;
   deleteAnnouncement: (announcementId: string) => void;
   openLinkManager: () => void;
   canManageHomeLinks: boolean;
+  session: DiscordSession;
   adminPermissions: Set<AdminPermission>;
 }) {
   const canDeleteAnnouncements = Boolean((role?.level && role.level >= 100) || adminPermissions.has("delete_announcements"));
+  const canEditAnnouncement = (announcement: HubData["announcements"][number]) =>
+    Boolean((role?.level && role.level >= 100) || adminPermissions.has("create_announcements") || (announcement.createdById && announcement.createdById === session.discordUserId));
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<HubData["announcements"][number] | null>(null);
 
   return (
@@ -1073,13 +1080,17 @@ function HomeView({
             <p className="eyebrow">Announcements</p>
             <h3>Latest updates</h3>
           </div>
-          {(canManageContent(role, adminPermissions) || adminPermissions.has("create_announcements")) ? <button className="button primary" type="button" onClick={openAnnouncementEditor}>New Announcement</button> : null}
+          {(canManageContent(role, adminPermissions) || adminPermissions.has("create_announcements")) ? <button className="button primary" type="button" onClick={() => openAnnouncementEditor()}>New Announcement</button> : null}
         </div>
         <div className="announcement-grid">
           {visibleAnnouncements.length ? visibleAnnouncements.map((announcement) => (
             <article className={`announcement-card accent-${announcement.accentColor || "neutral"}`} key={announcement.id} role="button" tabIndex={0} onClick={() => setSelectedAnnouncement(announcement)} onKeyDown={(event) => event.key === "Enter" && setSelectedAnnouncement(announcement)}>
               <div className="announcement-meta">
                 <span className={`status-pill ${announcement.status}`}>{announcement.status}</span>
+                {canEditAnnouncement(announcement) ? <button className="button secondary compact-action" type="button" onClick={(event) => {
+                  event.stopPropagation();
+                  openAnnouncementEditor(announcement.id);
+                }}>Edit</button> : null}
                 {canDeleteAnnouncements ? <button className="button secondary danger-text compact-action" type="button" onClick={(event) => {
                   event.stopPropagation();
                   deleteAnnouncement(announcement.id);
@@ -1109,12 +1120,20 @@ function HomeView({
   );
 }
 
-function AnnouncementEditor({ close, save }: { close: () => void; save: (announcement: { title: string; content: string; status: "draft" | "published"; accentColor?: string; allowedRoleIds: StaffRoleId[] }) => void }) {
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [status, setStatus] = useState<"draft" | "published">("draft");
-  const [accentColor, setAccentColor] = useState("");
-  const [allowedRoleIds, setAllowedRoleIds] = useState<StaffRoleId[]>(["leadership-team", "owner"]);
+function AnnouncementEditor({
+  announcement,
+  close,
+  save,
+}: {
+  announcement?: HubData["announcements"][number];
+  close: () => void;
+  save: (announcement: { title: string; content: string; status: "draft" | "published"; accentColor?: string; allowedRoleIds: StaffRoleId[] }) => void;
+}) {
+  const [title, setTitle] = useState(announcement?.title || "");
+  const [content, setContent] = useState(announcement?.content || "");
+  const [status, setStatus] = useState<"draft" | "published">(announcement?.status || "draft");
+  const [accentColor, setAccentColor] = useState(announcement?.accentColor || "");
+  const [allowedRoleIds, setAllowedRoleIds] = useState<StaffRoleId[]>(announcement?.allowedRoleIds || ["leadership-team", "owner"]);
   const editableRoles = staffRoles.filter((role) => role.id !== "owner");
 
   function toggleRole(roleId: StaffRoleId) {
@@ -1133,7 +1152,7 @@ function AnnouncementEditor({ close, save }: { close: () => void; save: (announc
         <div className="dialog-header">
           <div>
             <p className="eyebrow">Announcements</p>
-            <h3>New Announcement</h3>
+            <h3>{announcement ? "Edit Announcement" : "New Announcement"}</h3>
           </div>
           <button className="icon-button" type="button" onClick={close}>x</button>
         </div>
@@ -1170,7 +1189,7 @@ function AnnouncementEditor({ close, save }: { close: () => void; save: (announc
         </fieldset>
         <div className="dialog-actions">
           <button className="button secondary" type="button" onClick={close}>Cancel</button>
-          <button className="button primary" type="submit">Save Announcement</button>
+          <button className="button primary" type="submit">{announcement ? "Update Announcement" : "Save Announcement"}</button>
         </div>
       </form>
     </div>
@@ -2142,6 +2161,7 @@ function LookupPanel({ role, profiles, activityLogs, activityMinuteEntries, week
   const hasLookupTarget = Boolean(matchingKnownProfile || selectedSuggestion);
   const canShowLookupHistory = Boolean(query.trim() && !lookupBlocked && matchingRole && hasLookupTarget);
   const lookupUsername = selectedSuggestion?.username || matchingKnownProfile?.robloxUsername || query.trim();
+  const lookupUserId = selectedSuggestion?.userId || matchingKnownProfile?.robloxUserId;
 
   async function runLookup() {
     if (!query.trim()) return;
@@ -2182,7 +2202,12 @@ function LookupPanel({ role, profiles, activityLogs, activityMinuteEntries, week
       {selectedSuggestion ? (
         <div className="lookup-selected-user">
           <strong>{selectedSuggestion.username}</strong>
-          <span>{selectedSuggestion.roleName || "Roblox group member"}{selectedSuggestion.roleRank ? ` - rank ${selectedSuggestion.roleRank}` : ""}</span>
+          <span>{selectedSuggestion.roleName || "Roblox group member"}{selectedSuggestion.roleRank ? ` - rank ${selectedSuggestion.roleRank}` : ""}{lookupUserId ? ` - ID ${lookupUserId}` : ""}</span>
+        </div>
+      ) : matchingKnownProfile ? (
+        <div className="lookup-selected-user">
+          <strong>{matchingKnownProfile.robloxUsername || matchingKnownProfile.discordUsername}</strong>
+          <span>{matchingKnownProfile.robloxRoleName || visibleRole?.name || "Roblox group member"}{matchingKnownProfile.robloxRoleRank ? ` - rank ${matchingKnownProfile.robloxRoleRank}` : ""}{lookupUserId ? ` - ID ${lookupUserId}` : ""}</span>
         </div>
       ) : null}
       {lookupBlocked ? <EmptyState title="Lookup restricted" text="This profile is not below your current access level." /> : null}

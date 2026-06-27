@@ -27,6 +27,8 @@ export async function POST(request: NextRequest) {
     status: body.status || "draft",
     accentColor: body.accentColor || undefined,
     allowedRoleIds: Array.from(new Set([...(body.allowedRoleIds || []), "owner"])),
+    createdBy: session?.username || "Unknown",
+    createdById: session?.discordUserId,
   };
 
   let forbidden = false;
