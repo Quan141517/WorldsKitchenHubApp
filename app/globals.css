@@ -1987,15 +1987,15 @@ h3 {
 .reader-content div,
 .rich-editor p,
 .reader-content p {
-  min-height: 1.32em;
+  min-height: 1.38em;
   font-size: 16px;
-  margin: 0 0 2px !important;
-  line-height: 1.32 !important;
+  margin: 0 0 10px !important;
+  line-height: 1.38 !important;
 }
 
 .rich-editor > *,
 .reader-content > * {
-  margin-block: 0 2px !important;
+  margin-block: 0 10px !important;
 }
 
 .rich-editor .doc-spacer,
@@ -2004,15 +2004,15 @@ h3 {
 .rich-editor div:empty,
 .reader-content p:empty,
 .reader-content div:empty {
-  min-height: 0.4em !important;
-  height: 0.4em !important;
-  margin: 0 !important;
-  line-height: 0.4em !important;
+  min-height: 1em !important;
+  height: 1em !important;
+  margin: 0 0 8px !important;
+  line-height: 1em !important;
 }
 
 .rich-editor br,
 .reader-content br {
-  line-height: 1.32;
+  line-height: 1.38;
 }
 
 .document-preview {
