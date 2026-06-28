@@ -1701,8 +1701,11 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
             className="rich-editor"
             contentEditable
             data-resource-editor
+            lang="en"
             ref={editorRef}
             suppressContentEditableWarning
+            autoCapitalize="sentences"
+            autoCorrect="on"
             spellCheck
             onInput={(event) => {
               setContent(normalizeDocumentHtml(event.currentTarget.innerHTML));
