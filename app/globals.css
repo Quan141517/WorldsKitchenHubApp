@@ -2584,6 +2584,21 @@ textarea:focus,
   transform: translateY(-1px);
 }
 
+.resource-button.draggable-resource {
+  cursor: grab;
+}
+
+.resource-button.draggable-resource:active,
+.resource-button.draggable-resource.dragging {
+  cursor: grabbing;
+}
+
+.resource-button.dragging {
+  opacity: 0.62;
+  outline: 2px dashed rgba(24, 169, 131, 0.55);
+  outline-offset: 4px;
+}
+
 .login-shell {
   background: linear-gradient(135deg, rgba(235, 249, 255, 0.42), rgba(255, 249, 238, 0.38));
 }

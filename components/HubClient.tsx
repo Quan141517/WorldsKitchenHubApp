@@ -445,6 +445,23 @@ export function HubClient({ session: initialSession, initialData }: { session: D
     setHubData(result.data);
   }
 
+  async function reorderResource(categoryId: string, sourceResourceId: string, targetResourceId: string) {
+    if (sourceResourceId === targetResourceId) return;
+    const response = await fetch("/api/resources/reorder", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ categoryId, sourceResourceId, targetResourceId }),
+    });
+
+    if (!response.ok) {
+      window.alert("The resource could not be moved.");
+      return;
+    }
+
+    const result = (await response.json()) as { data: HubData };
+    setHubData(result.data);
+  }
+
   async function addQuickLink(link: { label: string; url: string }) {
     const response = await fetch("/api/links", {
       method: "POST",
@@ -845,6 +862,7 @@ export function HubClient({ session: initialSession, initialData }: { session: D
             openCategoryLinks={(categoryId) => setCategoryLinkManagerState({ categoryId })}
             deleteCategory={deleteCategory}
             reorderCategory={reorderCategory}
+            reorderResource={reorderResource}
             canManageCategoryStructure={canManageCategories}
           />
         ) : null}
@@ -1337,6 +1355,7 @@ function CategoryView({
   openCategoryLinks,
   deleteCategory,
   reorderCategory,
+  reorderResource,
   canManageCategoryStructure,
 }: {
   category: Category;
@@ -1350,11 +1369,14 @@ function CategoryView({
   openCategoryLinks: (categoryId: string) => void;
   deleteCategory: (categoryId: string) => void;
   reorderCategory: (categoryId: string, direction: "up" | "down") => void;
+  reorderResource: (categoryId: string, sourceResourceId: string, targetResourceId: string) => void;
   canManageCategoryStructure: boolean;
 }) {
   const canCreateResource = Boolean((role?.level && role.level >= 100) || adminPermissions.has("create_resources"));
+  const canReorderResources = Boolean((role?.level && role.level >= 100) || adminPermissions.has("edit_resources"));
   const canManageCategoryLinks = Boolean((role?.level && role.level >= 100) || adminPermissions.has("manage_category_links"));
   const hasHeaderActions = canCreateResource || canManageCategoryLinks || canManageCategoryStructure;
+  const [draggedResourceId, setDraggedResourceId] = useState<string | null>(null);
 
   return (
     <section className="workspace">
@@ -1389,7 +1411,32 @@ function CategoryView({
       ) : null}
       <div className="resource-grid category-resource-grid">
         {resources.length ? resources.map((resource) => (
-          <button className={`resource-card resource-button accent-${resource.accentColor || "neutral"}`} key={resource.id} type="button" onClick={() => openResource(category.id, resource.id)}>
+          <button
+            className={`resource-card resource-button accent-${resource.accentColor || "neutral"} ${canReorderResources ? "draggable-resource" : ""} ${draggedResourceId === resource.id ? "dragging" : ""}`}
+            draggable={canReorderResources}
+            key={resource.id}
+            type="button"
+            onClick={() => openResource(category.id, resource.id)}
+            onDragStart={(event) => {
+              if (!canReorderResources) return;
+              setDraggedResourceId(resource.id);
+              event.dataTransfer.effectAllowed = "move";
+              event.dataTransfer.setData("text/plain", resource.id);
+            }}
+            onDragEnd={() => setDraggedResourceId(null)}
+            onDragOver={(event) => {
+              if (!canReorderResources || !draggedResourceId || draggedResourceId === resource.id) return;
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              const sourceResourceId = draggedResourceId || event.dataTransfer.getData("text/plain");
+              setDraggedResourceId(null);
+              if (!canReorderResources || !sourceResourceId || sourceResourceId === resource.id) return;
+              reorderResource(category.id, sourceResourceId, resource.id);
+            }}
+          >
             <h4>{resource.title}</h4>
             <span className={`status-pill ${resource.status}`}>{resource.status}</span>
           </button>
