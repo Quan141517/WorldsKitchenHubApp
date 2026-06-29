@@ -1906,6 +1906,17 @@ h3 {
   font-weight: 700;
 }
 
+.toolbar-apply-button {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--accent-strong);
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
 .compact-tool {
   display: inline-flex;
   align-items: center;

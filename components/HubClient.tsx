@@ -1447,6 +1447,8 @@ function CategoryEditor({ category, close, save }: { category?: Category; close:
 }
 
 function ReaderView({ categoryName, resource, role, adminPermissions, backToCategory, editResource, deleteResource }: { categoryName: string; resource: Resource; role: StaffRole | null; adminPermissions: Set<AdminPermission>; backToCategory: () => void; editResource: () => void; deleteResource: () => void }) {
+  const contentHasTitle = /<h1\b/i.test(resource.contentHtml);
+
   return (
     <section className="reader-view">
       <div className="reader-actions">
@@ -1460,7 +1462,7 @@ function ReaderView({ categoryName, resource, role, adminPermissions, backToCate
       </div>
       <article className="document-page">
         <p className="eyebrow">{categoryName}</p>
-        <h3>{resource.title}</h3>
+        {!contentHasTitle ? <h3>{resource.title}</h3> : null}
         <div className="reader-content" dangerouslySetInnerHTML={{ __html: resource.contentHtml }} />
       </article>
     </section>
@@ -1484,6 +1486,8 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
   const [blockStyle, setBlockStyle] = useState("p");
   const [fontFamily, setFontFamily] = useState<string>(editorFonts[0][0]);
   const [fontSize, setFontSize] = useState("16");
+  const [textColor, setTextColor] = useState("#1f2933");
+  const [highlightColor, setHighlightColor] = useState("#b8f3d4");
   const editorRef = useRef<HTMLDivElement | null>(null);
   const editorSelectionRef = useRef<Range | null>(null);
 
@@ -1557,6 +1561,16 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
   function applyFontFamily(family: string) {
     setFontFamily(family);
     applyInlineStyle({ fontFamily: family });
+  }
+
+  function applyTextColor(color = textColor) {
+    setTextColor(color);
+    runCommand("foreColor", color);
+  }
+
+  function applyHighlightColor(color = highlightColor) {
+    setHighlightColor(color);
+    runCommand("backColor", color);
   }
 
   function applyBlockStyle(style: string) {
@@ -1660,6 +1674,7 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
             <select value={fontFamily} onMouseDown={saveEditorSelection} onChange={(event) => applyFontFamily(event.target.value)} aria-label="Font family">
               {editorFonts.map(([value, label]) => <option value={value} key={value}>{label}</option>)}
             </select>
+            <button className="toolbar-apply-button" type="button" title="Apply selected font" onMouseDown={(event) => event.preventDefault()} onClick={() => applyFontFamily(fontFamily)}>Apply</button>
             <input className="font-size-input" type="number" min="6" max="72" step="1" value={fontSize} onMouseDown={saveEditorSelection} onChange={(event) => applyFontSize(event.target.value || "16")} aria-label="Font size" />
           </div>
           <div className="toolbar-group compact-buttons">
@@ -1689,12 +1704,14 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
             <span className="spacing-status">Normal spacing</span>
             <label className="compact-tool">
               Text
-              <input type="color" defaultValue="#1f2933" onMouseDown={saveEditorSelection} onChange={(event) => runCommand("foreColor", event.target.value)} />
+              <input type="color" value={textColor} onMouseDown={saveEditorSelection} onChange={(event) => applyTextColor(event.target.value)} />
             </label>
+            <button className="toolbar-apply-button" type="button" title="Apply selected text color" onMouseDown={(event) => event.preventDefault()} onClick={() => applyTextColor()}>Apply</button>
             <label className="compact-tool">
               Highlight
-              <input type="color" defaultValue="#b8f3d4" onMouseDown={saveEditorSelection} onChange={(event) => runCommand("backColor", event.target.value)} />
+              <input type="color" value={highlightColor} onMouseDown={saveEditorSelection} onChange={(event) => applyHighlightColor(event.target.value)} />
             </label>
+            <button className="toolbar-apply-button" type="button" title="Apply selected highlight color" onMouseDown={(event) => event.preventDefault()} onClick={() => applyHighlightColor()}>Apply</button>
           </div>
         </div>
         <div className="editor-workspace">
