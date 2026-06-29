@@ -2060,14 +2060,6 @@ h3 {
   text-decoration: underline;
 }
 
-.spelling-error {
-  text-decoration-line: underline;
-  text-decoration-style: wavy;
-  text-decoration-color: #d92d20;
-  text-decoration-thickness: 1.5px;
-  text-underline-offset: 2px;
-}
-
 .rich-editor hr,
 .reader-content hr {
   height: 1px;

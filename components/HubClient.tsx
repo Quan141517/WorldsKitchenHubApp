@@ -13,54 +13,6 @@ type ActivityLogUpdatePayload = { roles: TrainingRoles | ShiftRoles; notes: stri
 type RobloxSuggestion = { userId: string; username: string; displayName: string; avatarUrl: string | null; source: string; roleName?: string; roleRank?: number };
 
 const robloxSuggestionCache = new Map<string, RobloxSuggestion[]>();
-const commonEnglishTypos: Record<string, string> = {
-  accomodate: "accommodate",
-  acheive: "achieve",
-  adress: "address",
-  alot: "a lot",
-  apparant: "apparent",
-  arguement: "argument",
-  becuase: "because",
-  begining: "beginning",
-  beleive: "believe",
-  buisness: "business",
-  calender: "calendar",
-  comming: "coming",
-  comunicate: "communicate",
-  definate: "definite",
-  definately: "definitely",
-  seperate: "separate",
-  embarass: "embarrass",
-  enviroment: "environment",
-  existance: "existence",
-  fourty: "forty",
-  freind: "friend",
-  goverment: "government",
-  happend: "happened",
-  recieve: "receive",
-  recieved: "received",
-  responsability: "responsibility",
-  responsibile: "responsible",
-  occured: "occurred",
-  occuring: "occurring",
-  priviledge: "privilege",
-  recomend: "recommend",
-  succesful: "successful",
-  sucess: "success",
-  sucessful: "successful",
-  tommorow: "tomorrow",
-  untill: "until",
-  wierd: "weird",
-  wrold: "world",
-  teh: "the",
-  thier: "their",
-  thsi: "this",
-  taht: "that",
-  wich: "which",
-  waht: "what",
-  yuo: "you",
-  yuor: "your",
-};
 
 function getTodayDate() {
   const now = new Date();
@@ -1524,106 +1476,6 @@ function normalizeDocumentHtml(html: string) {
     .replace(/\sstyle="(?:\s*)"/gi, "");
 }
 
-function getEditorTextOffset(root: HTMLElement) {
-  const selection = window.getSelection();
-  if (!selection?.rangeCount || !root.contains(selection.anchorNode)) return null;
-  const range = selection.getRangeAt(0);
-  const prefix = range.cloneRange();
-  prefix.selectNodeContents(root);
-  prefix.setEnd(range.startContainer, range.startOffset);
-  return prefix.toString().length;
-}
-
-function restoreEditorTextOffset(root: HTMLElement, offset: number | null) {
-  if (offset === null) return;
-  const selection = window.getSelection();
-  if (!selection) return;
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  let remaining = offset;
-  let node = walker.nextNode();
-
-  while (node) {
-    const textLength = node.textContent?.length || 0;
-    if (remaining <= textLength) {
-      const range = document.createRange();
-      range.setStart(node, remaining);
-      range.collapse(true);
-      selection.removeAllRanges();
-      selection.addRange(range);
-      return;
-    }
-    remaining -= textLength;
-    node = walker.nextNode();
-  }
-
-  const range = document.createRange();
-  range.selectNodeContents(root);
-  range.collapse(false);
-  selection.removeAllRanges();
-  selection.addRange(range);
-}
-
-function unwrapSpellcheckMarks(root: HTMLElement) {
-  root.querySelectorAll("span[data-spellcheck-error='true']").forEach((span) => {
-    span.replaceWith(document.createTextNode(span.textContent || ""));
-  });
-}
-
-function shouldUnderlineEnglishWord(word: string) {
-  const normalized = word.toLowerCase().replace(/^'+|'+$/g, "");
-  if (normalized.length < 3 || /\d/.test(normalized)) return false;
-  if (commonEnglishTypos[normalized]) return true;
-  return /(.)\1{2,}/i.test(normalized);
-}
-
-function highlightEnglishSpelling(root: HTMLElement) {
-  const caretOffset = getEditorTextOffset(root);
-  unwrapSpellcheckMarks(root);
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-    acceptNode(node) {
-      const parent = node.parentElement;
-      if (!parent || parent.closest("[contenteditable='false']")) return NodeFilter.FILTER_REJECT;
-      return /[A-Za-z]/.test(node.textContent || "") ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-    },
-  });
-  const textNodes: Text[] = [];
-  let currentNode = walker.nextNode();
-  while (currentNode) {
-    textNodes.push(currentNode as Text);
-    currentNode = walker.nextNode();
-  }
-
-  for (const textNode of textNodes) {
-    const text = textNode.textContent || "";
-    const fragment = document.createDocumentFragment();
-    let lastIndex = 0;
-    let changed = false;
-
-    for (const match of text.matchAll(/[A-Za-z][A-Za-z']*/g)) {
-      const word = match[0];
-      const index = match.index || 0;
-      if (!shouldUnderlineEnglishWord(word)) continue;
-      const suggestion = commonEnglishTypos[word.toLowerCase().replace(/^'+|'+$/g, "")];
-      fragment.appendChild(document.createTextNode(text.slice(lastIndex, index)));
-      const mark = document.createElement("span");
-      mark.className = "spelling-error";
-      mark.dataset.spellcheckError = "true";
-      if (suggestion) mark.title = `Possible spelling: ${suggestion}`;
-      mark.textContent = word;
-      fragment.appendChild(mark);
-      lastIndex = index + word.length;
-      changed = true;
-    }
-
-    if (changed) {
-      fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
-      textNode.replaceWith(fragment);
-    }
-  }
-
-  restoreEditorTextOffset(root, caretOffset);
-}
-
 function ResourceEditor({ category, resource, close, save }: { category: Category; resource?: Resource; close: () => void; save: (categoryId: string, resource: Resource) => void }) {
   const [title, setTitle] = useState(resource?.title || "");
   const [status, setStatus] = useState<Resource["status"]>(resource?.status || "draft");
@@ -1634,37 +1486,20 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
   const [fontSize, setFontSize] = useState("16");
   const editorRef = useRef<HTMLDivElement | null>(null);
   const editorSelectionRef = useRef<Range | null>(null);
-  const spellcheckTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     document.execCommand("defaultParagraphSeparator", false, "p");
     document.execCommand("styleWithCSS", false, "true");
     if (editorRef.current) editorRef.current.innerHTML = normalizeDocumentHtml(content);
-    scheduleSpellcheck();
     // Only seed the contentEditable when this editor instance opens.
     // Updating it on every keystroke resets the caret position.
-    return () => {
-      if (spellcheckTimeoutRef.current) window.clearTimeout(spellcheckTimeoutRef.current);
-    };
   }, []);
-
-  function scheduleSpellcheck() {
-    if (spellcheckTimeoutRef.current) window.clearTimeout(spellcheckTimeoutRef.current);
-    spellcheckTimeoutRef.current = window.setTimeout(() => {
-      if (!editorRef.current) return;
-      highlightEnglishSpelling(editorRef.current);
-      setContent(normalizeDocumentHtml(editorRef.current.innerHTML));
-      saveEditorSelection();
-    }, 650);
-  }
 
   function runCommand(command: string, value?: string) {
     restoreEditorSelection();
-    if (editorRef.current) unwrapSpellcheckMarks(editorRef.current);
     document.execCommand(command, false, value);
     if (editorRef.current) setContent(normalizeDocumentHtml(editorRef.current.innerHTML));
     saveEditorSelection();
-    scheduleSpellcheck();
   }
 
   function saveEditorSelection() {
@@ -1683,7 +1518,6 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
 
   function applyInlineStyle(styles: Record<string, string>) {
     restoreEditorSelection();
-    if (editorRef.current) unwrapSpellcheckMarks(editorRef.current);
     const selection = window.getSelection();
     const range = selection?.rangeCount ? selection.getRangeAt(0) : editorSelectionRef.current;
     if (!selection || !range || !editorRef.current?.contains(range.commonAncestorContainer)) return;
@@ -1713,7 +1547,6 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
 
     editorSelectionRef.current = selection.getRangeAt(0).cloneRange();
     setContent(normalizeDocumentHtml(editorRef.current.innerHTML));
-    scheduleSpellcheck();
   }
 
   function applyFontSize(size: string) {
@@ -1744,7 +1577,6 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
 
   function handleEditorPaste(event: React.ClipboardEvent<HTMLDivElement>) {
     event.preventDefault();
-    if (editorRef.current) unwrapSpellcheckMarks(editorRef.current);
     const html = event.clipboardData.getData("text/html");
     const text = event.clipboardData.getData("text/plain");
     const cleanedHtml = html
@@ -1756,12 +1588,10 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
     document.execCommand("insertHTML", false, cleanedHtml);
     if (editorRef.current) setContent(normalizeDocumentHtml(editorRef.current.innerHTML));
     saveEditorSelection();
-    scheduleSpellcheck();
   }
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (editorRef.current) unwrapSpellcheckMarks(editorRef.current);
     const currentContent = normalizeDocumentHtml(editorRef.current?.innerHTML || content);
     const plainText = currentContent.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
     const nextResource: Resource = {
@@ -1881,7 +1711,6 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
             onInput={(event) => {
               setContent(normalizeDocumentHtml(event.currentTarget.innerHTML));
               saveEditorSelection();
-              scheduleSpellcheck();
             }}
             onPaste={handleEditorPaste}
             onKeyUp={saveEditorSelection}
