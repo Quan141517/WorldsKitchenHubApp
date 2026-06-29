@@ -5,12 +5,12 @@ import { getSession } from "@/lib/session";
 import { filterHubDataForSession } from "@/lib/visibility";
 import type { ShiftRoles, TrainingRoles } from "@/lib/mock-data";
 
-function canModifyLog(roleLevel: number | undefined, hasManagePermission: boolean, sessionUserId: string | undefined, loggerUserId: string) {
-  return Boolean((roleLevel && roleLevel >= 100) || hasManagePermission || (sessionUserId && sessionUserId === loggerUserId));
+function canModifyLog(isOwner: boolean, hasManagePermission: boolean, sessionUserId: string | undefined, loggerUserId: string) {
+  return Boolean(isOwner || hasManagePermission || (sessionUserId && sessionUserId === loggerUserId));
 }
 
-function canDeleteLog(roleLevel: number | undefined, hasManagePermission: boolean, sessionUserId: string | undefined, loggerUserId: string) {
-  return Boolean((roleLevel && roleLevel >= 100) || hasManagePermission || (sessionUserId && sessionUserId === loggerUserId));
+function canDeleteLog(isOwner: boolean, hasManagePermission: boolean, sessionUserId: string | undefined, loggerUserId: string) {
+  return Boolean(isOwner || hasManagePermission || (sessionUserId && sessionUserId === loggerUserId));
 }
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ logId: string }> }) {
@@ -27,7 +27,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ l
   const data = await updateHubData((hubData) => {
     const log = hubData.activityLogs.find((item) => item.id === logId);
     if (!log) return hubData;
-    if (!canModifyLog(session?.role?.level, hasAdminPermission(hubData, session?.discordUserId, "manage_activity_logs"), session?.discordUserId, log.loggerDiscordUserId)) {
+    if (!canModifyLog(session?.role?.id === "owner", hasAdminPermission(hubData, session?.discordUserId, "manage_activity_logs"), session?.discordUserId, log.loggerDiscordUserId)) {
       forbidden = true;
       return hubData;
     }
@@ -66,7 +66,7 @@ export async function DELETE(_request: NextRequest, context: { params: Promise<{
   const data = await updateHubData((hubData) => {
     const log = hubData.activityLogs.find((item) => item.id === logId);
     if (!log) return hubData;
-    if (!canDeleteLog(session?.role?.level, hasAdminPermission(hubData, session?.discordUserId, "manage_activity_logs"), session?.discordUserId, log.loggerDiscordUserId)) {
+    if (!canDeleteLog(session?.role?.id === "owner", hasAdminPermission(hubData, session?.discordUserId, "manage_activity_logs"), session?.discordUserId, log.loggerDiscordUserId)) {
       forbidden = true;
       return hubData;
     }

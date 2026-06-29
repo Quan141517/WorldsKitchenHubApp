@@ -18,7 +18,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ r
   let updatedResource: Resource | null = null;
   let forbidden = false;
   const data = await updateHubData((hubData) => {
-    if (!((session?.role?.level && session.role.level >= 100) || hasAdminPermission(hubData, session?.discordUserId, "edit_resources"))) {
+    if (!(session?.role?.id === "owner" || hasAdminPermission(hubData, session?.discordUserId, "edit_resources"))) {
       forbidden = true;
       return hubData;
     }
@@ -59,7 +59,7 @@ export async function DELETE(_request: NextRequest, context: { params: Promise<{
   let moved = false;
   let forbidden = false;
   const data = await updateHubData((hubData) => {
-    if (!((session?.role?.level && session.role.level >= 100) || hasAdminPermission(hubData, session?.discordUserId, "move_resources_to_bin"))) {
+    if (!(session?.role?.id === "owner" || hasAdminPermission(hubData, session?.discordUserId, "move_resources_to_bin"))) {
       forbidden = true;
       return hubData;
     }

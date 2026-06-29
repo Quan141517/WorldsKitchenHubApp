@@ -1,31 +1,26 @@
+import { adminPermissions } from "./mock-data";
 import type { AdminPermission, HubData } from "./mock-data";
 import type { StaffRole } from "./roles";
 import type { DiscordSession } from "./session";
 
-function getPermissions(data: HubData, discordUserId?: string) {
-  const permissions = new Set<AdminPermission>();
-  if (!discordUserId) return permissions;
-
-  for (const grant of data.adminGrants) {
-    if (grant.discordUserId !== discordUserId || grant.revokedAt) continue;
-    const level = data.adminLevels.find((item) => item.id === grant.adminLevelId);
-    level?.permissions.forEach((permission) => permissions.add(permission));
-  }
-
-  return permissions;
+function getRolePermissions(data: HubData, role: StaffRole | null) {
+  if (role?.id === "owner") return new Set<AdminPermission>(adminPermissions);
+  if (!role) return new Set<AdminPermission>();
+  const teamGrant = data.teamPermissions.find((grant) => grant.roleId === role.id);
+  return new Set<AdminPermission>(teamGrant?.permissions || []);
 }
 
 function canSeeDeleted(role: StaffRole | null, permissions: Set<AdminPermission>) {
-  return Boolean((role && role.level >= 100) || permissions.has("restore_from_bin") || permissions.has("delete_permanently"));
+  return Boolean(role?.id === "owner" || permissions.has("view_recovery_bin") || permissions.has("restore_from_bin") || permissions.has("delete_permanently"));
 }
 
 function canSeeAudit(role: StaffRole | null, permissions: Set<AdminPermission>) {
-  return Boolean((role && role.level >= 100) || permissions.has("view_audit_logs"));
+  return Boolean(role?.id === "owner" || permissions.has("view_audit_logs"));
 }
 
 function canSeeActivity(role: StaffRole | null, permissions: Set<AdminPermission>) {
   return Boolean(
-    (role && role.level >= 20) ||
+    role?.id === "owner" ||
     permissions.has("view_staff_activity") ||
     permissions.has("view_corporate_lookup") ||
     permissions.has("manage_activity_logs") ||
@@ -35,12 +30,12 @@ function canSeeActivity(role: StaffRole | null, permissions: Set<AdminPermission
 }
 
 function canSeeAllAssignments(role: StaffRole | null, permissions: Set<AdminPermission>) {
-  return Boolean((role && role.level >= 40) || permissions.has("view_corporate_lookup") || permissions.has("manage_assignments"));
+  return Boolean(role?.id === "owner" || permissions.has("view_corporate_lookup") || permissions.has("manage_assignments"));
 }
 
 export function filterHubDataForSession(data: HubData, session: DiscordSession | null): HubData {
   const role = session?.role || null;
-  const permissions = getPermissions(data, session?.discordUserId);
+  const permissions = getRolePermissions(data, role);
   const owner = role?.id === "owner";
   const includeDeleted = canSeeDeleted(role, permissions);
   const activeOwnGrants = data.adminGrants.filter((grant) => grant.discordUserId === session?.discordUserId && !grant.revokedAt);
@@ -74,6 +69,8 @@ export function filterHubDataForSession(data: HubData, session: DiscordSession |
     activityMinuteEntries: canSeeActivity(role, permissions) ? data.activityMinuteEntries : [],
     adminLevels: owner ? data.adminLevels : data.adminLevels.filter((level) => ownAdminLevelIds.has(level.id)),
     adminGrants: owner ? data.adminGrants : activeOwnGrants,
+    teamPermissions: owner ? data.teamPermissions : data.teamPermissions.filter((grant) => grant.roleId === role?.id),
     auditLogs: canSeeAudit(role, permissions) ? data.auditLogs : [],
+    auditLogsPaused: data.auditLogsPaused,
   };
 }

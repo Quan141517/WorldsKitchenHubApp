@@ -1604,6 +1604,48 @@ h3 {
   overflow: auto;
 }
 
+.permission-board-card {
+  overflow: visible;
+}
+
+.permission-board-summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.permission-board-summary h4 {
+  margin: 3px 0 4px;
+  font-size: 1.15rem;
+}
+
+.permission-group-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.permission-group {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfaf7;
+  padding: 12px;
+}
+
+.permission-group > strong {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--ink);
+  font-size: 0.92rem;
+}
+
+.permission-toggle-list {
+  display: grid;
+  gap: 8px;
+}
+
 .admin-levels-table {
   display: grid;
   gap: 8px;
@@ -1655,6 +1697,12 @@ h3 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.permission-toggle-list .permission-check span {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
 }
 
 .admin-grant-list {

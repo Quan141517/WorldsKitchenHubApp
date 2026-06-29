@@ -29,7 +29,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ a
     if (!announcement || announcement.deletedAt) return hubData;
 
     const canEdit =
-      (session?.role?.level && session.role.level >= 100) ||
+      session?.role?.id === "owner" ||
       hasAdminPermission(hubData, session?.discordUserId, "create_announcements") ||
       Boolean(announcement.createdById && announcement.createdById === session?.discordUserId);
 
@@ -67,7 +67,7 @@ export async function DELETE(_request: NextRequest, context: { params: Promise<{
   let deleted = false;
   let forbidden = false;
   const data = await updateHubData((hubData) => {
-    if (!((session?.role?.level && session.role.level >= 100) || hasAdminPermission(hubData, session?.discordUserId, "delete_announcements"))) {
+    if (!(session?.role?.id === "owner" || hasAdminPermission(hubData, session?.discordUserId, "delete_announcements"))) {
       forbidden = true;
       return hubData;
     }

@@ -1,6 +1,7 @@
 import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { activitySlots, adminLevels, adminPermissions, activityMinuteEntries, createInitialHubData, weeklyAssignments, type AdminLevel, type AdminPermission, type AuditLog, type HubData, type Resource, type StaffProfile } from "./mock-data";
+import { activitySlots, adminLevels, adminPermissions, activityMinuteEntries, createInitialHubData, teamPermissions, weeklyAssignments, type AdminLevel, type AdminPermission, type AuditLog, type HubData, type Resource, type StaffProfile, type TeamPermissionGrant } from "./mock-data";
+import type { StaffRoleId } from "./roles";
 import type { DiscordSession } from "./session";
 import { createSupabaseServerClient, isSupabaseConfigured } from "./supabase";
 
@@ -137,9 +138,25 @@ function normalizeHubData(data: HubData): HubData {
     activityMinuteEntries: data.activityMinuteEntries || activityMinuteEntries,
     adminLevels: normalizeAdminLevels(data.adminLevels),
     adminGrants: data.adminGrants || [],
+    teamPermissions: normalizeTeamPermissions(data.teamPermissions),
     auditLogs: data.auditLogs || [],
     auditLogsPaused: data.auditLogsPaused || false,
   };
+}
+
+function normalizeTeamPermissions(grants?: TeamPermissionGrant[]) {
+  const validPermissions = new Set<AdminPermission>(adminPermissions);
+  const byRoleId = new Map<StaffRoleId, TeamPermissionGrant>();
+
+  for (const grant of grants || []) {
+    if (grant.roleId === "owner") continue;
+    byRoleId.set(grant.roleId, {
+      ...grant,
+      permissions: (grant.permissions || []).filter((permission): permission is AdminPermission => validPermissions.has(permission as AdminPermission)),
+    });
+  }
+
+  return teamPermissions.map((defaultGrant) => byRoleId.get(defaultGrant.roleId) || defaultGrant);
 }
 
 function normalizeAdminLevels(levels?: AdminLevel[]) {
@@ -192,20 +209,29 @@ export function addAuditLog(data: HubData, entry: Omit<AuditLog, "id" | "created
 }
 
 export function getAdminPermissions(data: HubData, discordUserId?: string) {
-  const permissions = new Set<AdminPermission>();
-  if (!discordUserId) return permissions;
-
-  const activeGrants = data.adminGrants.filter((grant) => grant.discordUserId === discordUserId && !grant.revokedAt);
-  for (const grant of activeGrants) {
-    const level = data.adminLevels.find((item) => item.id === grant.adminLevelId);
-    level?.permissions.forEach((permission) => permissions.add(permission));
-  }
-
-  return permissions;
+  if (!discordUserId) return new Set<AdminPermission>();
+  const profile = data.profiles.find((item) => item.discordUserId === discordUserId);
+  return getRolePermissions(data, profile?.highestRoleId);
 }
 
 export function hasAdminPermission(data: HubData, discordUserId: string | undefined, permission: AdminPermission) {
   return getAdminPermissions(data, discordUserId).has(permission);
+}
+
+export function getRolePermissions(data: HubData, roleId?: StaffRoleId | null) {
+  if (roleId === "owner") return new Set<AdminPermission>(adminPermissions);
+  if (!roleId) return new Set<AdminPermission>();
+
+  const teamGrant = data.teamPermissions.find((grant) => grant.roleId === roleId);
+  return new Set<AdminPermission>(teamGrant?.permissions || []);
+}
+
+export function hasRolePermission(data: HubData, roleId: StaffRoleId | null | undefined, permission: AdminPermission) {
+  return getRolePermissions(data, roleId).has(permission);
+}
+
+export function hasSessionPermission(data: HubData, session: DiscordSession | null | undefined, permission: AdminPermission) {
+  return hasRolePermission(data, session?.role?.id, permission);
 }
 
 export async function upsertStaffProfile(session: DiscordSession) {

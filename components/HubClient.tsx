@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { activitySlots, adminPermissions, type ActivityLog, type ActivityMinuteEntry, type ActivitySlots, type AdminGrant, type AdminLevel, type AdminPermission, type AuditLog, type Category, type HubData, type QuickLink, type Resource, type ShiftRoles, type StaffProfile, type TrainingRoles, type WeeklyAssignment } from "@/lib/mock-data";
+import { activitySlots, adminPermissions, type ActivityLog, type ActivityMinuteEntry, type ActivitySlots, type AdminPermission, type AuditLog, type Category, type HubData, type QuickLink, type Resource, type ShiftRoles, type StaffProfile, type TeamPermissionGrant, type TrainingRoles, type WeeklyAssignment } from "@/lib/mock-data";
 import { staffRoles, type StaffRole, type StaffRoleId } from "@/lib/roles";
 import type { DiscordSession } from "@/lib/session";
 
@@ -146,35 +146,37 @@ function canSee(role: StaffRole | null, allowedRoleIds: string[]) {
 }
 
 function canManageContent(role: StaffRole | null, adminPermissions?: Set<AdminPermission>) {
-  return Boolean((role && role.level >= 100) || adminPermissions?.has("create_resources") || adminPermissions?.has("edit_resources"));
+  return Boolean(role?.id === "owner" || adminPermissions?.has("create_resources") || adminPermissions?.has("edit_resources"));
 }
 
-function canViewStaffActivity(role: StaffRole | null) {
-  return Boolean(role && role.level >= 20);
+function canViewStaffActivity(role: StaffRole | null, adminPermissions?: Set<AdminPermission>) {
+  return Boolean(
+    role?.id === "owner" ||
+    adminPermissions?.has("view_staff_activity") ||
+    adminPermissions?.has("view_corporate_lookup") ||
+    adminPermissions?.has("manage_activity_logs") ||
+    adminPermissions?.has("manage_assignments") ||
+    adminPermissions?.has("manage_activity_slots")
+  );
 }
 
-function canCreateActivityLogs(role: StaffRole | null) {
-  return Boolean(role && role.level >= 30);
+function canCreateActivityLogs(role: StaffRole | null, adminPermissions?: Set<AdminPermission>) {
+  return Boolean(role?.id === "owner" || adminPermissions?.has("manage_activity_logs"));
 }
 
-function canViewAssignments(role: StaffRole | null) {
-  return Boolean(role && role.level >= 40);
+function canViewAssignments(role: StaffRole | null, adminPermissions?: Set<AdminPermission>) {
+  return Boolean(role?.id === "owner" || adminPermissions?.has("view_corporate_lookup") || adminPermissions?.has("manage_assignments") || adminPermissions?.has("manage_activity_slots"));
 }
 
 function canViewAdminTools(role: StaffRole | null) {
   return Boolean(role && role.id === "owner");
 }
 
-function getSessionAdminPermissions(data: HubData, discordUserId: string) {
-  const permissions = new Set<AdminPermission>();
-  const activeGrants = data.adminGrants.filter((grant) => grant.discordUserId === discordUserId && !grant.revokedAt);
-
-  for (const grant of activeGrants) {
-    const level = data.adminLevels.find((item) => item.id === grant.adminLevelId);
-    level?.permissions.forEach((permission) => permissions.add(permission));
-  }
-
-  return permissions;
+function getRoleAdminPermissions(data: HubData, roleId?: StaffRoleId | null) {
+  if (roleId === "owner") return new Set<AdminPermission>(adminPermissions);
+  if (!roleId) return new Set<AdminPermission>();
+  const teamGrant = data.teamPermissions.find((grant) => grant.roleId === roleId);
+  return new Set<AdminPermission>(teamGrant?.permissions || []);
 }
 
 const cardAccentOptions = [
@@ -225,7 +227,16 @@ const adminPermissionLabels: Record<AdminPermission, string> = {
   manage_recovery_bin: "Manage recovery bin",
   view_staff_activity: "View staff activity",
   view_corporate_lookup: "Use corporate lookup",
+  copy_protected_content: "Copy protected content",
 };
+
+const permissionGroups: Array<{ title: string; permissions: AdminPermission[] }> = [
+  { title: "Documents", permissions: ["create_resources", "edit_resources", "move_resources_to_bin", "copy_protected_content"] },
+  { title: "Announcements & Links", permissions: ["create_announcements", "delete_announcements", "manage_home_links", "manage_category_links"] },
+  { title: "Categories & Recovery", permissions: ["manage_categories", "view_recovery_bin", "restore_from_bin", "delete_permanently", "manage_recovery_bin"] },
+  { title: "Staff Activity", permissions: ["view_staff_activity", "view_corporate_lookup", "manage_activity_logs", "manage_assignments", "manage_activity_slots"] },
+  { title: "Admin Records", permissions: ["view_audit_logs", "manage_admin_levels", "manage_admin_grants"] },
+];
 
 const adminPermissionKeys = adminPermissions;
 
@@ -244,13 +255,13 @@ export function HubClient({ session: initialSession, initialData }: { session: D
   const visibleCategories = useMemo(() => hubData.categories.filter((category) => !category.deletedAt && canSee(role, category.allowedRoleIds)), [hubData.categories, role]);
   const visibleAnnouncements = useMemo(() => hubData.announcements.filter((announcement) => !announcement.deletedAt && canSee(role, announcement.allowedRoleIds)), [hubData.announcements, role]);
   const visibleQuickLinks = useMemo(() => hubData.quickLinks.filter((link) => !link.deletedAt), [hubData.quickLinks]);
-  const adminPermissionSet = useMemo(() => getSessionAdminPermissions(hubData, session.discordUserId), [hubData, session.discordUserId]);
-  const previewAdminPermissionSet = useMemo(() => getSessionAdminPermissions(hubData, previewDiscordUserId.trim()), [hubData, previewDiscordUserId]);
+  const adminPermissionSet = useMemo(() => getRoleAdminPermissions(hubData, sessionRole?.id), [hubData, sessionRole?.id]);
+  const previewAdminPermissionSet = useMemo(() => getRoleAdminPermissions(hubData, previewRoleId || sessionRole?.id), [hubData, previewRoleId, sessionRole?.id]);
   const isPreviewingNonOwner = Boolean(sessionRole?.id === "owner" && previewRoleId && previewRoleId !== "owner");
   const effectiveAdminPermissionSet = useMemo(() => {
-    if (sessionRole?.id === "owner" && previewDiscordUserId.trim()) return previewAdminPermissionSet;
+    if (sessionRole?.id === "owner" && previewRoleId) return previewAdminPermissionSet;
     return isPreviewingNonOwner ? new Set<AdminPermission>() : adminPermissionSet;
-  }, [adminPermissionSet, isPreviewingNonOwner, previewAdminPermissionSet, previewDiscordUserId, sessionRole?.id]);
+  }, [adminPermissionSet, isPreviewingNonOwner, previewAdminPermissionSet, previewRoleId, sessionRole?.id]);
   const currentProfile = hubData.profiles.find((profile) => profile.discordUserId === session.discordUserId);
   const activitySession = useMemo<DiscordSession>(() => {
     if (!isPreviewingNonOwner) return { ...session, username: currentProfile?.robloxUsername || session.username };
@@ -265,7 +276,7 @@ export function HubClient({ session: initialSession, initialData }: { session: D
   const [activeCategoryId, setActiveCategoryId] = useState(visibleCategories[0]?.id || "");
   const [activeResourceId, setActiveResourceId] = useState("");
   const [activityTab, setActivityTab] = useState<ActivityTab>("my");
-  const canCopyProtectedContent = Boolean(role && role.level >= 100);
+  const canCopyProtectedContent = Boolean(role?.id === "owner" || effectiveAdminPermissionSet.has("copy_protected_content"));
   const copyProtected = Boolean(role && !canCopyProtectedContent);
   const activeCategory = visibleCategories.find((category) => category.id === activeCategoryId) || visibleCategories[0];
   const activeResources = activeCategory?.resources.filter((resource) => !resource.deletedAt) || [];
@@ -317,9 +328,9 @@ export function HubClient({ session: initialSession, initialData }: { session: D
       window.clearInterval(interval);
     };
   }, [session.role?.id, session.robloxRoleRank]);
-  const canSeeStaffActivity = canViewStaffActivity(role) || effectiveAdminPermissionSet.has("view_staff_activity") || effectiveAdminPermissionSet.has("view_corporate_lookup") || effectiveAdminPermissionSet.has("manage_activity_logs") || effectiveAdminPermissionSet.has("manage_assignments");
-  const canSeeRecoveryBin = Boolean((role?.level && role.level >= 100) || effectiveAdminPermissionSet.has("view_recovery_bin") || effectiveAdminPermissionSet.has("manage_recovery_bin") || effectiveAdminPermissionSet.has("restore_from_bin") || effectiveAdminPermissionSet.has("delete_permanently") || effectiveAdminPermissionSet.has("move_resources_to_bin"));
-  const canSeeAuditLogs = Boolean((role?.level && role.level >= 100) || effectiveAdminPermissionSet.has("view_audit_logs"));
+  const canSeeStaffActivity = canViewStaffActivity(role, effectiveAdminPermissionSet);
+  const canSeeRecoveryBin = Boolean(role?.id === "owner" || effectiveAdminPermissionSet.has("view_recovery_bin") || effectiveAdminPermissionSet.has("manage_recovery_bin") || effectiveAdminPermissionSet.has("restore_from_bin") || effectiveAdminPermissionSet.has("delete_permanently") || effectiveAdminPermissionSet.has("move_resources_to_bin"));
+  const canSeeAuditLogs = Boolean(role?.id === "owner" || effectiveAdminPermissionSet.has("view_audit_logs"));
   const canSeeAdminUsers = canViewAdminTools(role);
   const canManageCategories = canViewAdminTools(role) || effectiveAdminPermissionSet.has("manage_categories");
 
@@ -638,43 +649,15 @@ export function HubClient({ session: initialSession, initialData }: { session: D
     setHubData(result.data);
   }
 
-  async function saveAdminLevels(adminLevels: AdminLevel[]) {
-    const response = await fetch("/api/admin/levels", {
+  async function saveTeamPermissions(roleId: StaffRoleId, permissions: AdminPermission[]) {
+    const response = await fetch("/api/admin/team-permissions", {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ adminLevels }),
+      body: JSON.stringify({ roleId, permissions }),
     });
 
     if (!response.ok) {
-      window.alert("Admin levels could not be saved.");
-      return;
-    }
-
-    const result = (await response.json()) as { data: HubData };
-    setHubData(result.data);
-  }
-
-  async function addAdminGrant(grant: { discordUserId: string; adminLevelId: string }) {
-    const response = await fetch("/api/admin/grants", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(grant),
-    });
-
-    if (!response.ok) {
-      window.alert("Admin grant could not be saved.");
-      return;
-    }
-
-    const result = (await response.json()) as { data: HubData };
-    setHubData(result.data);
-  }
-
-  async function revokeAdminGrant(grantId: string) {
-    const response = await fetch(`/api/admin/grants/${grantId}`, { method: "DELETE" });
-
-    if (!response.ok) {
-      window.alert("Admin grant could not be revoked.");
+      window.alert("Team permissions could not be saved.");
       return;
     }
 
@@ -787,12 +770,8 @@ export function HubClient({ session: initialSession, initialData }: { session: D
               }}
               placeholder="Optional preview Discord user ID"
             />
-            <p className="muted">{visibleCategories.length} visible categories. {previewDiscordUserId.trim() ? "Custom admin grants are included." : "Highest matching role controls access."}</p>
-            {previewDiscordUserId.trim() ? (
-              <p className="muted">
-                {effectiveAdminPermissionSet.size ? `${effectiveAdminPermissionSet.size} custom permissions active.` : "No custom admin permissions found for this Discord ID."}
-              </p>
-            ) : null}
+            <p className="muted">{visibleCategories.length} visible categories. Team permissions control actions.</p>
+            <p className="muted">{effectiveAdminPermissionSet.size} active permissions for this preview.</p>
           </div>
         ) : null}
 
@@ -810,7 +789,7 @@ export function HubClient({ session: initialSession, initialData }: { session: D
         <div className="sidebar-footer">
           {canSeeRecoveryBin ? <button className={`sidebar-button ${activeView === "bin" ? "active" : ""}`} type="button" onClick={() => setActiveView("bin")}>Recovery Bin</button> : null}
           {canSeeAuditLogs ? <button className={`sidebar-button ${activeView === "audit" ? "active" : ""}`} type="button" onClick={() => setActiveView("audit")}>Audit Logs</button> : null}
-          {canSeeAdminUsers ? <button className={`sidebar-button ${activeView === "admin" ? "active" : ""}`} type="button" onClick={() => setActiveView("admin")}>Admin Users</button> : null}
+        {canSeeAdminUsers ? <button className={`sidebar-button ${activeView === "admin" ? "active" : ""}`} type="button" onClick={() => setActiveView("admin")}>Permissions</button> : null}
         </div>
       </aside>
 
@@ -925,11 +904,8 @@ export function HubClient({ session: initialSession, initialData }: { session: D
         {activeView === "admin" && canSeeAdminUsers ? (
           <AdminUsersView
             profiles={hubData.profiles}
-            adminLevels={hubData.adminLevels}
-            adminGrants={hubData.adminGrants.filter((grant) => !grant.revokedAt)}
-            saveAdminLevels={saveAdminLevels}
-            addAdminGrant={addAdminGrant}
-            revokeAdminGrant={revokeAdminGrant}
+            teamPermissions={hubData.teamPermissions}
+            saveTeamPermissions={saveTeamPermissions}
           />
         ) : null}
       </section>
@@ -1063,9 +1039,9 @@ function HomeView({
   session: DiscordSession;
   adminPermissions: Set<AdminPermission>;
 }) {
-  const canDeleteAnnouncements = Boolean((role?.level && role.level >= 100) || adminPermissions.has("delete_announcements"));
+  const canDeleteAnnouncements = Boolean(role?.id === "owner" || adminPermissions.has("delete_announcements"));
   const canEditAnnouncement = (announcement: HubData["announcements"][number]) =>
-    Boolean((role?.level && role.level >= 100) || adminPermissions.has("create_announcements") || (announcement.createdById && announcement.createdById === session.discordUserId));
+    Boolean(role?.id === "owner" || adminPermissions.has("create_announcements") || (announcement.createdById && announcement.createdById === session.discordUserId));
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<HubData["announcements"][number] | null>(null);
 
   return (
@@ -1372,9 +1348,9 @@ function CategoryView({
   reorderResource: (categoryId: string, sourceResourceId: string, targetResourceId: string) => void;
   canManageCategoryStructure: boolean;
 }) {
-  const canCreateResource = Boolean((role?.level && role.level >= 100) || adminPermissions.has("create_resources"));
-  const canReorderResources = Boolean((role?.level && role.level >= 100) || adminPermissions.has("edit_resources"));
-  const canManageCategoryLinks = Boolean((role?.level && role.level >= 100) || adminPermissions.has("manage_category_links"));
+  const canCreateResource = Boolean(role?.id === "owner" || adminPermissions.has("create_resources"));
+  const canReorderResources = Boolean(role?.id === "owner" || adminPermissions.has("edit_resources"));
+  const canManageCategoryLinks = Boolean(role?.id === "owner" || adminPermissions.has("manage_category_links"));
   const hasHeaderActions = canCreateResource || canManageCategoryLinks || canManageCategoryStructure;
   const [draggedResourceId, setDraggedResourceId] = useState<string | null>(null);
 
@@ -1502,8 +1478,8 @@ function ReaderView({ categoryName, resource, role, adminPermissions, backToCate
         <button className="back-button" type="button" onClick={backToCategory}>Back to category</button>
         {canManageContent(role, adminPermissions) ? (
           <div className="header-actions">
-            {adminPermissions.has("move_resources_to_bin") || (role?.level && role.level >= 100) ? <button className="button secondary danger-text" type="button" onClick={deleteResource}>Delete Resource</button> : null}
-            {adminPermissions.has("edit_resources") || (role?.level && role.level >= 100) ? <button className="button primary" type="button" onClick={editResource}>Edit Resource</button> : null}
+            {role?.id === "owner" || adminPermissions.has("move_resources_to_bin") ? <button className="button secondary danger-text" type="button" onClick={deleteResource}>Delete Resource</button> : null}
+            {role?.id === "owner" || adminPermissions.has("edit_resources") ? <button className="button primary" type="button" onClick={editResource}>Edit Resource</button> : null}
           </div>
         ) : null}
       </div>
@@ -1828,8 +1804,8 @@ function StaffActivityView({
   const activeLogs = activityLogs.filter((log) => !log.deletedAt);
   const activeAssignments = weeklyAssignments.filter((assignment) => !assignment.deletedAt);
   const usernameSuggestions = collectUsernamesFromLogs(activeLogs, profiles);
-  const canUseLookup = canViewAssignments(role) || adminPermissions.has("view_corporate_lookup");
-  const canUseAssignments = canViewAssignments(role) || adminPermissions.has("manage_assignments") || adminPermissions.has("manage_activity_slots");
+  const canUseLookup = canViewAssignments(role, adminPermissions);
+  const canUseAssignments = canViewAssignments(role, adminPermissions);
 
   return (
     <section className="workspace">
@@ -1925,7 +1901,7 @@ function MyActivityPanel({ role, session, profiles, activityLogs, activityMinute
     shifts: shiftGoal ? Math.min(100, Math.round((shiftCount / shiftGoal) * 100)) : 0,
     minutes: minutesGoal ? Math.min(100, Math.round((creditedMinutes / minutesGoal) * 100)) : 0,
   };
-  const shouldShowHistory = Boolean(hasAssignment && (!role || role.level < 100));
+  const shouldShowHistory = Boolean(hasAssignment && role?.id !== "owner");
 
   return (
     <div className="activity-panel">
@@ -2352,7 +2328,7 @@ function LogsPanel({
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)), [weekStart]);
   const dateLabel = formatDateLabel(selectedDate);
   const weekHasStarted = weekStart <= today;
-  const canLog = (canCreateActivityLogs(role) || adminPermissions.has("manage_activity_logs")) && weekHasStarted;
+  const canLog = canCreateActivityLogs(role, adminPermissions) && weekHasStarted;
 
   useEffect(() => {
     const selectedDateInWeek = weekDays.some((date) => sameDay(date, selectedDate));
@@ -2459,7 +2435,7 @@ function ActivityLogDetail({
   deleteActivityLog: (logId: string) => Promise<void>;
   close: () => void;
 }) {
-  const canLog = canCreateServer && (canCreateActivityLogs(role) || adminPermissions.has("manage_activity_logs"));
+  const canLog = canCreateServer && canCreateActivityLogs(role, adminPermissions);
   const isTraining = slot.type === "training";
   const [formOpen, setFormOpen] = useState(false);
   const [editingLog, setEditingLog] = useState<ActivityLog | null>(null);
@@ -2511,7 +2487,7 @@ function ActivityLogDetail({
                 <span className="status-pill published">Logged</span>
               </div>
               {log.type === "training" ? <TrainingServerPreview roles={log.roles as TrainingRoles} notes={log.notes} profiles={profiles} /> : <ShiftServerPreview roles={log.roles as ShiftRoles} notes={log.notes} profiles={profiles} />}
-              {(role?.level && role.level >= 100) || adminPermissions.has("manage_activity_logs") || log.loggerDiscordUserId === session.discordUserId ? (
+              {role?.id === "owner" || adminPermissions.has("manage_activity_logs") || log.loggerDiscordUserId === session.discordUserId ? (
                 <div className="dialog-actions">
                   <button className="button secondary" type="button" onClick={() => setEditingLog(log)}>Edit</button>
                   <button className="button secondary danger-text" type="button" onClick={() => deleteActivityLog(log.id)}>Delete</button>
@@ -2737,8 +2713,8 @@ function AssignmentsPanel({ role, adminPermissions, activitySlotsConfig, weeklyA
   const [trainingSlotInputs, setTrainingSlotInputs] = useState(slotLabelsToInputs(activitySlotsConfig.trainings));
   const [shiftSlotInputs, setShiftSlotInputs] = useState(slotLabelsToInputs(activitySlotsConfig.shifts));
   const manageableTeams = staffRoles.filter((staffRole) => ["supervision-team", "management-team", "corporate-team"].includes(staffRole.id));
-  const canManageAssignments = Boolean((role?.level && role.level >= 100) || adminPermissions.has("manage_assignments"));
-  const canManageSlots = Boolean((role?.level && role.level >= 100) || adminPermissions.has("manage_assignments") || adminPermissions.has("manage_activity_slots"));
+  const canManageAssignments = Boolean(role?.id === "owner" || adminPermissions.has("manage_assignments"));
+  const canManageSlots = Boolean(role?.id === "owner" || adminPermissions.has("manage_assignments") || adminPermissions.has("manage_activity_slots"));
 
   useEffect(() => {
     setTrainingSlotInputs(slotLabelsToInputs(activitySlotsConfig.trainings));
@@ -2997,7 +2973,7 @@ function RecoveryBinView({
 }) {
   const hasDeletedItems = deletedCategories.length || deletedAssignments.length || deletedActivityLogs.length || deletedCategoryLinks.length || deletedLinks.length || deletedResources.length;
   const canDeletePermanently = role?.id === "owner" || adminPermissions.has("delete_permanently");
-  const canRestoreStandardItem = Boolean((role?.level && role.level >= 100) || adminPermissions.has("restore_from_bin"));
+  const canRestoreStandardItem = Boolean(role?.id === "owner" || adminPermissions.has("restore_from_bin"));
   const canRestoreOwnerItem = role?.id === "owner" || adminPermissions.has("restore_from_bin");
 
   return (
@@ -3135,48 +3111,28 @@ function AuditLogsView({ logs }: { logs: AuditLog[] }) {
 
 function AdminUsersView({
   profiles,
-  adminLevels,
-  adminGrants,
-  saveAdminLevels,
-  addAdminGrant,
-  revokeAdminGrant,
+  teamPermissions,
+  saveTeamPermissions,
 }: {
   profiles: StaffProfile[];
-  adminLevels: AdminLevel[];
-  adminGrants: AdminGrant[];
-  saveAdminLevels: (adminLevels: AdminLevel[]) => Promise<void>;
-  addAdminGrant: (grant: { discordUserId: string; adminLevelId: string }) => Promise<void>;
-  revokeAdminGrant: (grantId: string) => Promise<void>;
+  teamPermissions: TeamPermissionGrant[];
+  saveTeamPermissions: (roleId: StaffRoleId, permissions: AdminPermission[]) => Promise<void>;
 }) {
-  const [levelsDraft, setLevelsDraft] = useState<AdminLevel[]>(adminLevels);
-  const [discordUserId, setDiscordUserId] = useState("");
-  const [adminLevelId, setAdminLevelId] = useState(adminLevels[0]?.id || "");
+  const [savingRoleId, setSavingRoleId] = useState<StaffRoleId | null>(null);
+  const manageableRoles = staffRoles.filter((staffRole) => staffRole.id !== "owner");
 
-  function updateLevelName(levelId: string, name: string) {
-    setLevelsDraft((current) => current.map((level) => level.id === levelId ? { ...level, name } : level));
+  function getTeamPermissions(roleId: StaffRoleId) {
+    return teamPermissions.find((grant) => grant.roleId === roleId)?.permissions || [];
   }
 
-  function togglePermission(levelId: string, permission: AdminPermission) {
-    setLevelsDraft((current) => current.map((level) => {
-      if (level.id !== levelId) return level;
-      const permissions = level.permissions.includes(permission)
-        ? level.permissions.filter((item) => item !== permission)
-        : [...level.permissions, permission];
-      return { ...level, permissions };
-    }));
-  }
-
-  function addLevel() {
-    const id = `custom-admin-${Date.now()}`;
-    setLevelsDraft((current) => [...current, { id, name: "New Admin Level", permissions: [] }]);
-    setAdminLevelId(id);
-  }
-
-  async function submitGrant(event: React.FormEvent) {
-    event.preventDefault();
-    if (!discordUserId.trim() || !adminLevelId) return;
-    await addAdminGrant({ discordUserId: discordUserId.trim(), adminLevelId });
-    setDiscordUserId("");
+  async function toggleTeamPermission(roleId: StaffRoleId, permission: AdminPermission) {
+    const currentPermissions = getTeamPermissions(roleId);
+    const nextPermissions = currentPermissions.includes(permission)
+      ? currentPermissions.filter((item) => item !== permission)
+      : [...currentPermissions, permission];
+    setSavingRoleId(roleId);
+    await saveTeamPermissions(roleId, nextPermissions);
+    setSavingRoleId(null);
   }
 
   return (
@@ -3184,68 +3140,59 @@ function AdminUsersView({
       <div className="content-header">
         <div>
           <p className="eyebrow">Owner Controls</p>
-          <h3>Admin Users</h3>
-        </div>
-        <div className="header-actions">
-          <button className="button secondary" type="button" onClick={addLevel}>Add Level</button>
-          <button className="button primary" type="button" onClick={() => saveAdminLevels(levelsDraft)}>Save Levels</button>
+          <h3>Permissions Board</h3>
+          <p className="muted">Teams start blocked from action permissions until you approve them here.</p>
         </div>
       </div>
       <div className="admin-layout">
-        <article className="admin-card">
-          <p className="eyebrow">Permission Matrix</p>
-          <h4>What each admin level can do</h4>
-          <div className="admin-levels-table">
-            <div className="admin-level-row admin-level-head">
-              <span>Level</span>
-              {adminPermissionKeys.map((permission) => <span key={permission}>{adminPermissionLabels[permission]}</span>)}
+        <article className="admin-card permission-board-card">
+          <div className="permission-board-summary">
+            <div>
+              <p className="eyebrow">Owner Access</p>
+              <h4>Owner</h4>
+              <p className="muted">All {adminPermissionKeys.length} permissions are always enabled for you.</p>
             </div>
-            {levelsDraft.map((level) => (
-              <div className="admin-level-row" key={level.id}>
-                <input value={level.name} onChange={(event) => updateLevelName(level.id, event.target.value)} />
-                {adminPermissionKeys.map((permission) => {
-                  const hasPermission = level.permissions.includes(permission);
-                  return (
-                    <label className={hasPermission ? "permission-check checked" : "permission-check"} key={permission}>
-                      <input type="checkbox" checked={hasPermission} onChange={() => togglePermission(level.id, permission)} />
-                      <span>{hasPermission ? "Allowed" : "Blocked"}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            ))}
+            <span className="status-pill published">Full access</span>
           </div>
         </article>
-        <article className="admin-card">
-          <p className="eyebrow">Current Grants</p>
-          <h4>Extra admins</h4>
-          <form className="admin-grant-form" onSubmit={submitGrant}>
-            <input value={discordUserId} onChange={(event) => setDiscordUserId(event.target.value)} placeholder="Discord user ID" />
-            <select value={adminLevelId} onChange={(event) => setAdminLevelId(event.target.value)}>
-              {levelsDraft.map((level) => <option value={level.id} key={level.id}>{level.name}</option>)}
-            </select>
-            <button className="button primary" type="submit">Add Admin</button>
-          </form>
-          <div className="admin-grant-list">
-            {adminGrants.length ? adminGrants.map((grant) => {
-              const level = levelsDraft.find((item) => item.id === grant.adminLevelId);
-              return (
-                <div className="admin-grant-row" key={grant.id}>
-                  <div>
-                    <strong>{grant.discordUserId}</strong>
-                    <p className="muted">{level?.name || grant.adminLevelId} - granted by {grant.grantedBy}</p>
-                  </div>
-                  <button className="button secondary danger-text" type="button" onClick={() => revokeAdminGrant(grant.id)}>Revoke</button>
+        {manageableRoles.map((staffRole) => {
+          const currentPermissions = getTeamPermissions(staffRole.id);
+          return (
+            <article className="admin-card permission-board-card" key={staffRole.id}>
+              <div className="permission-board-summary">
+                <div>
+                  <p className="eyebrow">Team</p>
+                  <h4>{staffRole.name}</h4>
+                  <p className="muted">{currentPermissions.length} of {adminPermissionKeys.length} permissions enabled.</p>
                 </div>
-              );
-            }) : (
-              <div>
-                <strong>No extra admins yet</strong>
-                <p className="muted">When you grant a Discord user an admin level, they will appear here.</p>
+                <span className={currentPermissions.length ? "status-pill published" : "status-pill"}>{savingRoleId === staffRole.id ? "Saving" : currentPermissions.length ? "Partial access" : "Blocked"}</span>
               </div>
-            )}
-          </div>
-        </article>
+              <div className="permission-group-grid">
+                {permissionGroups.map((group) => (
+                  <div className="permission-group" key={`${staffRole.id}-${group.title}`}>
+                    <strong>{group.title}</strong>
+                    <div className="permission-toggle-list">
+                      {group.permissions.map((permission) => {
+                        const hasPermission = currentPermissions.includes(permission);
+                        return (
+                          <label className={hasPermission ? "permission-check checked" : "permission-check"} key={permission}>
+                            <input
+                              type="checkbox"
+                              checked={hasPermission}
+                              disabled={savingRoleId === staffRole.id}
+                              onChange={() => void toggleTeamPermission(staffRole.id, permission)}
+                            />
+                            <span>{adminPermissionLabels[permission]}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </article>
+          );
+        })}
         <article className="admin-card">
           <p className="eyebrow">Connected Profiles</p>
           <h4>Recent Discord accounts</h4>

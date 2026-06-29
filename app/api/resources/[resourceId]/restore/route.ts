@@ -10,7 +10,7 @@ export async function POST(_request: NextRequest, context: { params: Promise<{ r
   let restored = false;
   let forbidden = false;
   const data = await updateHubData((hubData) => {
-    if (!((session?.role?.level && session.role.level >= 100) || hasAdminPermission(hubData, session?.discordUserId, "restore_from_bin"))) {
+    if (!(session?.role?.id === "owner" || hasAdminPermission(hubData, session?.discordUserId, "restore_from_bin"))) {
       forbidden = true;
       return hubData;
     }

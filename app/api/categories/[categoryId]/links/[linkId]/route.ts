@@ -10,7 +10,7 @@ export async function DELETE(_request: NextRequest, context: { params: Promise<{
   let moved = false;
   let forbidden = false;
   const data = await updateHubData((hubData) => {
-    if (!((session?.role?.level && session.role.level >= 100) || hasAdminPermission(hubData, session?.discordUserId, "manage_category_links"))) {
+    if (!(session?.role?.id === "owner" || hasAdminPermission(hubData, session?.discordUserId, "manage_category_links"))) {
       forbidden = true;
       return hubData;
     }

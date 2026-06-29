@@ -18,7 +18,7 @@ export async function PATCH(request: NextRequest) {
 
   let forbidden = false;
   const data = await updateHubData((hubData) => {
-    if (!((session?.role?.level && session.role.level >= 100) || hasAdminPermission(hubData, session?.discordUserId, "manage_assignments") || hasAdminPermission(hubData, session?.discordUserId, "manage_activity_slots"))) {
+    if (!(session?.role?.id === "owner" || hasAdminPermission(hubData, session?.discordUserId, "manage_assignments") || hasAdminPermission(hubData, session?.discordUserId, "manage_activity_slots"))) {
       forbidden = true;
       return hubData;
     }

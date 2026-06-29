@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
   let createdResource: Resource | null = null;
   let forbidden = false;
   const data = await updateHubData((hubData) => {
-    if (!((session?.role?.level && session.role.level >= 100) || hasAdminPermission(hubData, session?.discordUserId, "create_resources"))) {
+    if (!(session?.role?.id === "owner" || hasAdminPermission(hubData, session?.discordUserId, "create_resources"))) {
       forbidden = true;
       return hubData;
     }

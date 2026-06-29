@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
   let forbidden = false;
   const data = await updateHubData((hubData) => {
-    if (!((session?.role?.level && session.role.level >= 100) || hasAdminPermission(hubData, session?.discordUserId, "manage_assignments"))) {
+    if (!(session?.role?.id === "owner" || hasAdminPermission(hubData, session?.discordUserId, "manage_assignments"))) {
       forbidden = true;
       return hubData;
     }

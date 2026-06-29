@@ -155,7 +155,8 @@ export type AdminPermission =
   | "view_recovery_bin"
   | "manage_recovery_bin"
   | "view_staff_activity"
-  | "view_corporate_lookup";
+  | "view_corporate_lookup"
+  | "copy_protected_content";
 
 export const adminPermissions: AdminPermission[] = [
   "create_resources",
@@ -178,6 +179,7 @@ export const adminPermissions: AdminPermission[] = [
   "manage_recovery_bin",
   "view_staff_activity",
   "view_corporate_lookup",
+  "copy_protected_content",
 ];
 
 export type AdminLevel = {
@@ -196,6 +198,13 @@ export type AdminGrant = {
   revokedBy?: string;
 };
 
+export type TeamPermissionGrant = {
+  roleId: StaffRoleId;
+  permissions: AdminPermission[];
+  updatedAt?: string;
+  updatedBy?: string;
+};
+
 export type HubData = {
   profiles: StaffProfile[];
   categories: Category[];
@@ -207,6 +216,7 @@ export type HubData = {
   activityMinuteEntries: ActivityMinuteEntry[];
   adminLevels: AdminLevel[];
   adminGrants: AdminGrant[];
+  teamPermissions: TeamPermissionGrant[];
   auditLogs: AuditLog[];
   auditLogsPaused?: boolean;
 };
@@ -381,6 +391,14 @@ export const adminLevels: AdminLevel[] = [
 
 export const adminGrants: AdminGrant[] = [];
 
+export const teamPermissions: TeamPermissionGrant[] = [
+  { roleId: "worlds-kitchen-team", permissions: [] },
+  { roleId: "supervision-team", permissions: [] },
+  { roleId: "management-team", permissions: [] },
+  { roleId: "corporate-team", permissions: [] },
+  { roleId: "leadership-team", permissions: [] },
+];
+
 export function createInitialHubData(): HubData {
   return {
     profiles: [],
@@ -393,6 +411,7 @@ export function createInitialHubData(): HubData {
     activityMinuteEntries,
     adminLevels,
     adminGrants,
+    teamPermissions,
     auditLogs: [],
   };
 }
