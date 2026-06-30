@@ -186,7 +186,15 @@ const cardAccentOptions = [
   ["blue", "Sky Blue"],
   ["gold", "Warm Gold"],
   ["rose", "Soft Rose"],
+  ["mint", "Mint"],
+  ["teal", "Teal"],
+  ["sky", "Light Sky"],
+  ["brown", "Light Brown"],
+  ["lavender", "Lavender"],
+  ["coral", "Coral"],
 ] as const;
+
+const predefinedAccentValues = new Set<string>(cardAccentOptions.map(([value]) => value).filter(Boolean));
 
 const editorFonts = [
   ["Inter, Arial, sans-serif", "Inter"],
@@ -239,6 +247,60 @@ const permissionGroups: Array<{ title: string; permissions: AdminPermission[] }>
 ];
 
 const adminPermissionKeys = adminPermissions;
+
+function isHexColor(value: string) {
+  return /^#[0-9a-f]{6}$/i.test(value.trim());
+}
+
+function normalizeHexColor(value: string) {
+  const trimmed = value.trim();
+  if (/^[0-9a-f]{6}$/i.test(trimmed)) return `#${trimmed}`;
+  return isHexColor(trimmed) ? trimmed : "";
+}
+
+function getAccentClassName(accentColor?: string) {
+  if (!accentColor || isHexColor(accentColor)) return "accent-neutral";
+  return predefinedAccentValues.has(accentColor) ? `accent-${accentColor}` : "accent-neutral";
+}
+
+function getAccentSelectValue(accentColor: string) {
+  if (!accentColor || predefinedAccentValues.has(accentColor)) return accentColor;
+  return "#87ceeb";
+}
+
+function getSavableAccentColor(accentColor: string) {
+  if (predefinedAccentValues.has(accentColor) || isHexColor(accentColor)) return accentColor;
+  return "";
+}
+
+function hexToRgb(value: string) {
+  const hex = normalizeHexColor(value);
+  if (!hex) return null;
+  return {
+    r: parseInt(hex.slice(1, 3), 16),
+    g: parseInt(hex.slice(3, 5), 16),
+    b: parseInt(hex.slice(5, 7), 16),
+  };
+}
+
+function getCustomAccentStyle(accentColor?: string): React.CSSProperties | undefined {
+  const rgb = hexToRgb(accentColor || "");
+  if (!rgb) return undefined;
+
+  return {
+    borderColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.42)`,
+    borderLeftColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.78)`,
+    background: `linear-gradient(135deg, rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.22) 0%, rgba(255, 255, 255, 0.97) 76%)`,
+  };
+}
+
+function rgbStringToHex(value: string) {
+  const match = value.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/i);
+  if (!match) return "";
+  const alpha = match[4] === undefined ? 1 : Number(match[4]);
+  if (alpha === 0) return "";
+  return `#${[match[1], match[2], match[3]].map((part) => Number(part).toString(16).padStart(2, "0")).join("")}`;
+}
 
 export function HubClient({ session: initialSession, initialData }: { session: DiscordSession; initialData: HubData }) {
   const [session, setSession] = useState<DiscordSession>(initialSession);
@@ -1078,7 +1140,7 @@ function HomeView({
         </div>
         <div className="announcement-grid">
           {visibleAnnouncements.length ? visibleAnnouncements.map((announcement) => (
-            <article className={`announcement-card accent-${announcement.accentColor || "neutral"}`} key={announcement.id} role="button" tabIndex={0} onClick={() => setSelectedAnnouncement(announcement)} onKeyDown={(event) => event.key === "Enter" && setSelectedAnnouncement(announcement)}>
+            <article className={`announcement-card ${getAccentClassName(announcement.accentColor)}`} style={getCustomAccentStyle(announcement.accentColor)} key={announcement.id} role="button" tabIndex={0} onClick={() => setSelectedAnnouncement(announcement)} onKeyDown={(event) => event.key === "Enter" && setSelectedAnnouncement(announcement)}>
               <div className="announcement-meta">
                 <span className={`status-pill ${announcement.status}`}>{announcement.status}</span>
                 {canEditAnnouncement(announcement) ? <button className="button secondary compact-action" type="button" onClick={(event) => {
@@ -1137,7 +1199,7 @@ function AnnouncementEditor({
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!title.trim() || !content.trim()) return;
-    save({ title: title.trim(), content: content.trim(), status, accentColor: accentColor || undefined, allowedRoleIds: Array.from(new Set([...allowedRoleIds, "owner"])) });
+    save({ title: title.trim(), content: content.trim(), status, accentColor: getSavableAccentColor(accentColor) || undefined, allowedRoleIds: Array.from(new Set([...allowedRoleIds, "owner"])) });
   }
 
   return (
@@ -1168,10 +1230,19 @@ function AnnouncementEditor({
         </label>
         <label>
           Card color
-          <select value={accentColor} onChange={(event) => setAccentColor(event.target.value)}>
-            {cardAccentOptions.map(([value, label]) => <option value={value} key={value || "neutral"}>{label}</option>)}
-          </select>
-        </label>
+          <select value={getAccentSelectValue(accentColor)} onChange={(event) => setAccentColor(event.target.value)}>
+                {cardAccentOptions.map(([value, label]) => <option value={value} key={value || "neutral"}>{label}</option>)}
+                <option value="#87ceeb">Custom hex</option>
+              </select>
+              <input
+                className="hex-color-input"
+                value={accentColor.startsWith("#") ? accentColor : ""}
+                onChange={(event) => setAccentColor(event.target.value.startsWith("#") ? event.target.value : `#${event.target.value}`)}
+                placeholder="#87CEEB"
+                maxLength={7}
+                aria-label="Custom card hex color"
+              />
+            </label>
         <fieldset className="role-checklist">
           <legend>Who can view this announcement?</legend>
           {editableRoles.map((staffRole) => (
@@ -1388,7 +1459,8 @@ function CategoryView({
       <div className="resource-grid category-resource-grid">
         {resources.length ? resources.map((resource) => (
           <button
-            className={`resource-card resource-button accent-${resource.accentColor || "neutral"} ${canReorderResources ? "draggable-resource" : ""} ${draggedResourceId === resource.id ? "dragging" : ""}`}
+            className={`resource-card resource-button ${getAccentClassName(resource.accentColor)} ${canReorderResources ? "draggable-resource" : ""} ${draggedResourceId === resource.id ? "dragging" : ""}`}
+            style={getCustomAccentStyle(resource.accentColor)}
             draggable={canReorderResources}
             key={resource.id}
             type="button"
@@ -1533,6 +1605,7 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
     const selection = window.getSelection();
     if (!selection?.rangeCount || !editorRef.current?.contains(selection.anchorNode)) return;
     editorSelectionRef.current = selection.getRangeAt(0).cloneRange();
+    updateToolbarFromSelection();
   }
 
   function restoreEditorSelection() {
@@ -1576,6 +1649,63 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
     setContent(normalizeDocumentHtml(editorRef.current.innerHTML));
   }
 
+  function getSelectedElement() {
+    const selection = window.getSelection();
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : editorSelectionRef.current;
+    if (!range || !editorRef.current?.contains(range.commonAncestorContainer)) return null;
+    const node = range.startContainer.nodeType === Node.ELEMENT_NODE ? range.startContainer : range.startContainer.parentElement;
+    return node instanceof HTMLElement ? node : null;
+  }
+
+  function findBlockElement(element: HTMLElement | null) {
+    let current = element;
+    while (current && current !== editorRef.current) {
+      if (/^(H1|H2|P|DIV|LI)$/i.test(current.tagName)) return current;
+      current = current.parentElement;
+    }
+    return null;
+  }
+
+  function getEffectiveBackgroundColor(element: HTMLElement | null) {
+    let current = element;
+    while (current && current !== editorRef.current) {
+      const color = window.getComputedStyle(current).backgroundColor;
+      const hex = rgbStringToHex(color);
+      if (hex) return hex;
+      current = current.parentElement;
+    }
+    return "";
+  }
+
+  function updateToolbarFromSelection() {
+    const element = getSelectedElement();
+    if (!element) return;
+    const computedStyle = window.getComputedStyle(element);
+    const detectedTextColor = rgbStringToHex(computedStyle.color);
+    const detectedHighlightColor = getEffectiveBackgroundColor(element);
+    const detectedSize = Number.parseInt(computedStyle.fontSize, 10);
+    const blockElement = findBlockElement(element);
+
+    if (detectedTextColor) setTextColor(detectedTextColor);
+    if (detectedHighlightColor) setHighlightColor(detectedHighlightColor);
+    if (Number.isFinite(detectedSize)) setFontSize(String(detectedSize));
+    if (blockElement?.tagName === "H1") setBlockStyle("title");
+    else if (blockElement?.tagName === "H2") setBlockStyle("heading");
+    else if (blockElement) setBlockStyle("p");
+  }
+
+  useEffect(() => {
+    function handleSelectionChange() {
+      const selection = window.getSelection();
+      if (selection?.anchorNode && editorRef.current?.contains(selection.anchorNode)) {
+        saveEditorSelection();
+      }
+    }
+
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () => document.removeEventListener("selectionchange", handleSelectionChange);
+  }, []);
+
   function applyFontSize(size: string) {
     setFontSize(size);
     applyInlineStyle({ fontSize: `${size}px`, lineHeight: "1.16" });
@@ -1587,13 +1717,17 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
   }
 
   function applyTextColor(color = textColor) {
-    setTextColor(color);
-    runCommand("foreColor", color);
+    const nextColor = normalizeHexColor(color);
+    if (!nextColor) return;
+    setTextColor(nextColor);
+    applyInlineStyle({ color: nextColor });
   }
 
   function applyHighlightColor(color = highlightColor) {
-    setHighlightColor(color);
-    runCommand("backColor", color);
+    const nextColor = normalizeHexColor(color);
+    if (!nextColor) return;
+    setHighlightColor(nextColor);
+    applyInlineStyle({ backgroundColor: nextColor });
   }
 
   function applyBlockStyle(style: string) {
@@ -1635,7 +1769,7 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
       id: resource?.id || title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `resource-${Date.now()}`,
       title: title.trim(),
       status,
-      accentColor: accentColor || undefined,
+      accentColor: getSavableAccentColor(accentColor) || undefined,
       excerpt: plainText.slice(0, 120) || "No preview available yet.",
       contentHtml: currentContent,
     };
@@ -1675,9 +1809,18 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
               </label>
               <label>
                 Card color
-                <select value={accentColor} onChange={(event) => setAccentColor(event.target.value)}>
+                <select value={getAccentSelectValue(accentColor)} onChange={(event) => setAccentColor(event.target.value)}>
                   {cardAccentOptions.map(([value, label]) => <option value={value} key={value || "neutral"}>{label}</option>)}
+                  <option value="#87ceeb">Custom hex</option>
                 </select>
+                <input
+                  className="hex-color-input"
+                  value={accentColor.startsWith("#") ? accentColor : ""}
+                  onChange={(event) => setAccentColor(event.target.value.startsWith("#") ? event.target.value : `#${event.target.value}`)}
+                  placeholder="#87CEEB"
+                  maxLength={7}
+                  aria-label="Custom card hex color"
+                />
               </label>
             </div>
           </div>
@@ -1689,11 +1832,12 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
         </div>
         <div className="format-toolbar" aria-label="Formatting tools">
           <div className="toolbar-group">
-            <select value={blockStyle} onMouseDown={saveEditorSelection} onChange={(event) => applyBlockStyle(event.target.value)} aria-label="Paragraph style">
+            <select value={blockStyle} onMouseDown={saveEditorSelection} onChange={(event) => setBlockStyle(event.target.value)} aria-label="Paragraph style">
               <option value="title">Title</option>
               <option value="heading">Heading</option>
               <option value="p">Normal</option>
             </select>
+            <button className="toolbar-apply-button" type="button" title="Apply selected paragraph style" onMouseDown={(event) => event.preventDefault()} onClick={() => applyBlockStyle(blockStyle)}>Apply</button>
             <select value={fontFamily} onMouseDown={saveEditorSelection} onChange={(event) => applyFontFamily(event.target.value)} aria-label="Font family">
               {editorFonts.map(([value, label]) => <option value={value} key={value}>{label}</option>)}
             </select>
@@ -1727,13 +1871,31 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
             <span className="spacing-status">Normal spacing</span>
             <label className="compact-tool">
               Text
-              <input type="color" value={textColor} onMouseDown={saveEditorSelection} onChange={(event) => applyTextColor(event.target.value)} />
+              <input type="color" value={normalizeHexColor(textColor) || "#1f2933"} onMouseDown={saveEditorSelection} onChange={(event) => setTextColor(event.target.value)} />
             </label>
+            <input
+              className="hex-color-input toolbar-hex-input"
+              value={textColor}
+              onMouseDown={saveEditorSelection}
+              onChange={(event) => setTextColor(event.target.value.startsWith("#") ? event.target.value : `#${event.target.value}`)}
+              placeholder="#1F2933"
+              maxLength={7}
+              aria-label="Text hex color"
+            />
             <button className="toolbar-apply-button" type="button" title="Apply selected text color" onMouseDown={(event) => event.preventDefault()} onClick={() => applyTextColor()}>Apply</button>
             <label className="compact-tool">
               Highlight
-              <input type="color" value={highlightColor} onMouseDown={saveEditorSelection} onChange={(event) => applyHighlightColor(event.target.value)} />
+              <input type="color" value={normalizeHexColor(highlightColor) || "#b8f3d4"} onMouseDown={saveEditorSelection} onChange={(event) => setHighlightColor(event.target.value)} />
             </label>
+            <input
+              className="hex-color-input toolbar-hex-input"
+              value={highlightColor}
+              onMouseDown={saveEditorSelection}
+              onChange={(event) => setHighlightColor(event.target.value.startsWith("#") ? event.target.value : `#${event.target.value}`)}
+              placeholder="#B8F3D4"
+              maxLength={7}
+              aria-label="Highlight hex color"
+            />
             <button className="toolbar-apply-button" type="button" title="Apply selected highlight color" onMouseDown={(event) => event.preventDefault()} onClick={() => applyHighlightColor()}>Apply</button>
           </div>
         </div>
