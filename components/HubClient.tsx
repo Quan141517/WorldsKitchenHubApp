@@ -11,6 +11,18 @@ type ActivityTab = "my" | "lookup" | "logs" | "assignments" | "leaders";
 type ActivityLogPayload = { type: "training" | "shift"; dateLabel: string; time: string; roles: TrainingRoles | ShiftRoles; notes: string; creditedMinutes?: number };
 type ActivityLogUpdatePayload = { roles: TrainingRoles | ShiftRoles; notes: string; creditedMinutes?: number };
 type RobloxSuggestion = { userId: string; username: string; displayName: string; avatarUrl: string | null; source: string; roleName?: string; roleRank?: number };
+type FormattingState = {
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  strikeThrough: boolean;
+  insertUnorderedList: boolean;
+  insertOrderedList: boolean;
+  justifyLeft: boolean;
+  justifyCenter: boolean;
+  justifyRight: boolean;
+  justifyFull: boolean;
+};
 
 const robloxSuggestionCache = new Map<string, RobloxSuggestion[]>();
 
@@ -301,6 +313,19 @@ function rgbStringToHex(value: string) {
   if (alpha === 0) return "";
   return `#${[match[1], match[2], match[3]].map((part) => Number(part).toString(16).padStart(2, "0")).join("")}`;
 }
+
+const inactiveFormattingState: FormattingState = {
+  bold: false,
+  italic: false,
+  underline: false,
+  strikeThrough: false,
+  insertUnorderedList: false,
+  insertOrderedList: false,
+  justifyLeft: false,
+  justifyCenter: false,
+  justifyRight: false,
+  justifyFull: false,
+};
 
 export function HubClient({ session: initialSession, initialData }: { session: DiscordSession; initialData: HubData }) {
   const [session, setSession] = useState<DiscordSession>(initialSession);
@@ -1583,6 +1608,7 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
   const [fontSize, setFontSize] = useState("16");
   const [textColor, setTextColor] = useState("#1f2933");
   const [highlightColor, setHighlightColor] = useState("#b8f3d4");
+  const [formattingState, setFormattingState] = useState<FormattingState>(inactiveFormattingState);
   const editorRef = useRef<HTMLDivElement | null>(null);
   const editorSelectionRef = useRef<Range | null>(null);
 
@@ -1599,6 +1625,22 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
     document.execCommand(command, false, value);
     if (editorRef.current) setContent(normalizeDocumentHtml(editorRef.current.innerHTML));
     saveEditorSelection();
+  }
+
+  function readFormattingState(): FormattingState {
+    const nextState = { ...inactiveFormattingState };
+    (Object.keys(nextState) as Array<keyof FormattingState>).forEach((command) => {
+      try {
+        nextState[command] = document.queryCommandState(command);
+      } catch {
+        nextState[command] = false;
+      }
+    });
+    return nextState;
+  }
+
+  function toolbarButtonClass(command: keyof FormattingState) {
+    return formattingState[command] ? "toolbar-button active" : "toolbar-button";
   }
 
   function saveEditorSelection() {
@@ -1692,6 +1734,7 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
     if (blockElement?.tagName === "H1") setBlockStyle("title");
     else if (blockElement?.tagName === "H2") setBlockStyle("heading");
     else if (blockElement) setBlockStyle("p");
+    setFormattingState(readFormattingState());
   }
 
   useEffect(() => {
@@ -1845,27 +1888,27 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
             <input className="font-size-input" type="number" min="6" max="72" step="1" value={fontSize} onMouseDown={saveEditorSelection} onChange={(event) => applyFontSize(event.target.value || "16")} aria-label="Font size" />
           </div>
           <div className="toolbar-group compact-buttons">
-            <button type="button" title="Bold" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("bold")}>B</button>
-            <button type="button" title="Italic" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("italic")}>I</button>
-            <button type="button" title="Underline" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("underline")}>U</button>
-            <button type="button" title="Strike" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("strikeThrough")}>S</button>
+            <button className={toolbarButtonClass("bold")} type="button" title="Bold" aria-pressed={formattingState.bold} onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("bold")}>B</button>
+            <button className={toolbarButtonClass("italic")} type="button" title="Italic" aria-pressed={formattingState.italic} onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("italic")}>I</button>
+            <button className={toolbarButtonClass("underline")} type="button" title="Underline" aria-pressed={formattingState.underline} onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("underline")}>U</button>
+            <button className={toolbarButtonClass("strikeThrough")} type="button" title="Strike" aria-pressed={formattingState.strikeThrough} onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("strikeThrough")}>S</button>
           </div>
           <div className="toolbar-group compact-buttons">
-            <button type="button" title="Bulleted list" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("insertUnorderedList")}>List</button>
-            <button type="button" title="Numbered list" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("insertOrderedList")}>1.</button>
-            <button type="button" title="Outdent" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("outdent")}>Out</button>
-            <button type="button" title="Indent" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("indent")}>In</button>
+            <button className={toolbarButtonClass("insertUnorderedList")} type="button" title="Bulleted list" aria-pressed={formattingState.insertUnorderedList} onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("insertUnorderedList")}>List</button>
+            <button className={toolbarButtonClass("insertOrderedList")} type="button" title="Numbered list" aria-pressed={formattingState.insertOrderedList} onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("insertOrderedList")}>1.</button>
+            <button className="toolbar-button" type="button" title="Outdent" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("outdent")}>Out</button>
+            <button className="toolbar-button" type="button" title="Indent" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("indent")}>In</button>
           </div>
           <div className="toolbar-group compact-buttons">
-            <button type="button" title="Align left" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("justifyLeft")}>Left</button>
-            <button type="button" title="Align center" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("justifyCenter")}>Center</button>
-            <button type="button" title="Align right" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("justifyRight")}>Right</button>
-            <button type="button" title="Justify" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("justifyFull")}>Justify</button>
+            <button className={toolbarButtonClass("justifyLeft")} type="button" title="Align left" aria-pressed={formattingState.justifyLeft} onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("justifyLeft")}>Left</button>
+            <button className={toolbarButtonClass("justifyCenter")} type="button" title="Align center" aria-pressed={formattingState.justifyCenter} onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("justifyCenter")}>Center</button>
+            <button className={toolbarButtonClass("justifyRight")} type="button" title="Align right" aria-pressed={formattingState.justifyRight} onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("justifyRight")}>Right</button>
+            <button className={toolbarButtonClass("justifyFull")} type="button" title="Justify" aria-pressed={formattingState.justifyFull} onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("justifyFull")}>Justify</button>
           </div>
           <div className="toolbar-group compact-buttons">
-            <button type="button" title="Insert link" onMouseDown={(event) => event.preventDefault()} onClick={insertLink}>Link</button>
-            <button type="button" title="Divider" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("insertHorizontalRule")}>Line</button>
-            <button type="button" title="Clear formatting" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("removeFormat")}>Clear</button>
+            <button className="toolbar-button" type="button" title="Insert link" onMouseDown={(event) => event.preventDefault()} onClick={insertLink}>Link</button>
+            <button className="toolbar-button" type="button" title="Divider" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("insertHorizontalRule")}>Line</button>
+            <button className="toolbar-button" type="button" title="Clear formatting" onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand("removeFormat")}>Clear</button>
           </div>
           <div className="toolbar-group">
             <span className="spacing-status">Normal spacing</span>

@@ -1993,6 +1993,7 @@ h3 {
   min-height: 34px;
   padding: 6px 28px 6px 10px;
   font-size: 0.92rem;
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease, background 140ms ease;
 }
 
 .font-size-input {
@@ -2002,6 +2003,7 @@ h3 {
   padding: 6px;
   text-align: center;
   font-weight: 700;
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease, background 140ms ease;
 }
 
 .hex-color-input {
@@ -2017,6 +2019,7 @@ h3 {
   min-width: 86px;
   min-height: 34px;
   padding: 6px 8px;
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease, background 140ms ease;
 }
 
 .spacing-status {
@@ -2041,6 +2044,37 @@ h3 {
   color: var(--ink);
   padding: 7px 9px;
   font-weight: 700;
+  box-shadow: 0 1px 0 rgba(31, 41, 51, 0.05);
+  transition: transform 120ms ease, background 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.toolbar-button.active,
+.compact-buttons button.active,
+.compact-buttons button[aria-pressed="true"] {
+  border-color: rgba(11, 130, 104, 0.58);
+  background: linear-gradient(180deg, #d9f6ec, #bfeee2);
+  color: #063f35;
+  box-shadow: inset 0 1px 2px rgba(31, 41, 51, 0.12), 0 0 0 2px rgba(24, 169, 131, 0.1);
+}
+
+.compact-buttons button:hover,
+.toolbar-apply-button:hover,
+.format-toolbar select:hover,
+.font-size-input:hover,
+.toolbar-hex-input:hover,
+.compact-tool input:hover {
+  transform: translateY(-1px);
+  border-color: rgba(24, 169, 131, 0.42);
+  box-shadow: 0 4px 10px rgba(31, 41, 51, 0.08);
+}
+
+.compact-buttons button:active,
+.toolbar-apply-button:active,
+.format-toolbar select:active,
+.font-size-input:active,
+.toolbar-hex-input:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: inset 0 1px 2px rgba(31, 41, 51, 0.12);
 }
 
 .toolbar-apply-button {
@@ -2052,6 +2086,8 @@ h3 {
   padding: 6px 10px;
   font-size: 0.78rem;
   font-weight: 750;
+  box-shadow: 0 1px 0 rgba(31, 41, 51, 0.04);
+  transition: transform 120ms ease, background 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
 }
 
 .compact-tool {
@@ -2067,6 +2103,32 @@ h3 {
   width: 36px;
   height: 34px;
   padding: 3px;
+  transition: transform 120ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .compact-buttons button,
+  .toolbar-apply-button,
+  .format-toolbar select,
+  .font-size-input,
+  .toolbar-hex-input,
+  .compact-tool input {
+    transition: none;
+  }
+
+  .compact-buttons button:hover,
+  .toolbar-apply-button:hover,
+  .format-toolbar select:hover,
+  .font-size-input:hover,
+  .toolbar-hex-input:hover,
+  .compact-tool input:hover,
+  .compact-buttons button:active,
+  .toolbar-apply-button:active,
+  .format-toolbar select:active,
+  .font-size-input:active,
+  .toolbar-hex-input:active {
+    transform: none;
+  }
 }
 
 .editor-workspace {
