@@ -2022,6 +2022,33 @@ h3 {
   transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease, background 140ms ease;
 }
 
+.toolbar-swatch-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid rgba(103, 176, 191, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 3px;
+}
+
+.toolbar-swatch {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  border: 1px solid rgba(31, 41, 51, 0.18);
+  border-radius: 6px;
+  padding: 0;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.58);
+  transition: transform 120ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.toolbar-swatch.active,
+.toolbar-swatch[aria-pressed="true"] {
+  border-color: rgba(11, 130, 104, 0.72);
+  box-shadow: 0 0 0 2px rgba(24, 169, 131, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.74);
+}
+
 .spacing-status {
   display: inline-flex;
   align-items: center;
@@ -2059,6 +2086,7 @@ h3 {
 
 .compact-buttons button:hover,
 .toolbar-apply-button:hover,
+.toolbar-swatch:hover,
 .format-toolbar select:hover,
 .font-size-input:hover,
 .toolbar-hex-input:hover,
@@ -2070,6 +2098,7 @@ h3 {
 
 .compact-buttons button:active,
 .toolbar-apply-button:active,
+.toolbar-swatch:active,
 .format-toolbar select:active,
 .font-size-input:active,
 .toolbar-hex-input:active {
@@ -2109,6 +2138,7 @@ h3 {
 @media (prefers-reduced-motion: reduce) {
   .compact-buttons button,
   .toolbar-apply-button,
+  .toolbar-swatch,
   .format-toolbar select,
   .font-size-input,
   .toolbar-hex-input,
@@ -2118,12 +2148,14 @@ h3 {
 
   .compact-buttons button:hover,
   .toolbar-apply-button:hover,
+  .toolbar-swatch:hover,
   .format-toolbar select:hover,
   .font-size-input:hover,
   .toolbar-hex-input:hover,
   .compact-tool input:hover,
   .compact-buttons button:active,
   .toolbar-apply-button:active,
+  .toolbar-swatch:active,
   .format-toolbar select:active,
   .font-size-input:active,
   .toolbar-hex-input:active {

@@ -217,6 +217,9 @@ const editorFonts = [
   ['"Courier New", Courier, monospace', "Courier"],
 ] as const;
 
+const textColorPresets = ["#1f2933", "#0b8268", "#2563eb", "#7c3aed", "#b45309", "#be123c", "#111827", "#ffffff"];
+const highlightColorPresets = ["#b8f3d4", "#bfdbfe", "#fde68a", "#fecdd3", "#ddd6fe", "#fed7aa", "#e5e7eb", "#ffffff"];
+
 const robloxRankRanges: Array<{ roleId: StaffRoleId; min: number; max: number }> = [
   { roleId: "worlds-kitchen-team", min: 5, max: 20 },
   { roleId: "supervision-team", min: 25, max: 40 },
@@ -1773,6 +1776,33 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
     applyInlineStyle({ backgroundColor: nextColor });
   }
 
+  function renderColorSwatches(colors: string[], selectedColor: string, applyColor: (color: string) => void) {
+    const normalizedSelected = normalizeHexColor(selectedColor);
+    return (
+      <div className="toolbar-swatch-row">
+        {colors.map((color) => {
+          const selected = normalizedSelected.toLowerCase() === color.toLowerCase();
+          return (
+            <button
+              className={selected ? "toolbar-swatch active" : "toolbar-swatch"}
+              type="button"
+              key={color}
+              title={color}
+              aria-label={`Apply ${color}`}
+              aria-pressed={selected}
+              style={{ backgroundColor: color }}
+              onMouseDown={(event) => {
+                event.preventDefault();
+                saveEditorSelection();
+              }}
+              onClick={() => applyColor(color)}
+            />
+          );
+        })}
+      </div>
+    );
+  }
+
   function applyBlockStyle(style: string) {
     setBlockStyle(style);
     const tagName = style === "title" ? "h1" : style === "heading" ? "h2" : "p";
@@ -1912,10 +1942,8 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
           </div>
           <div className="toolbar-group">
             <span className="spacing-status">Normal spacing</span>
-            <label className="compact-tool">
-              Text
-              <input type="color" value={normalizeHexColor(textColor) || "#1f2933"} onMouseDown={saveEditorSelection} onChange={(event) => setTextColor(event.target.value)} />
-            </label>
+            <span className="compact-tool">Text</span>
+            {renderColorSwatches(textColorPresets, textColor, applyTextColor)}
             <input
               className="hex-color-input toolbar-hex-input"
               value={textColor}
@@ -1926,10 +1954,8 @@ function ResourceEditor({ category, resource, close, save }: { category: Categor
               aria-label="Text hex color"
             />
             <button className="toolbar-apply-button" type="button" title="Apply selected text color" onMouseDown={(event) => event.preventDefault()} onClick={() => applyTextColor()}>Apply</button>
-            <label className="compact-tool">
-              Highlight
-              <input type="color" value={normalizeHexColor(highlightColor) || "#b8f3d4"} onMouseDown={saveEditorSelection} onChange={(event) => setHighlightColor(event.target.value)} />
-            </label>
+            <span className="compact-tool">Highlight</span>
+            {renderColorSwatches(highlightColorPresets, highlightColor, applyHighlightColor)}
             <input
               className="hex-color-input toolbar-hex-input"
               value={highlightColor}
