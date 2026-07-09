@@ -355,13 +355,14 @@ export function HubClient({ session: initialSession, initialData }: { session: D
   const currentProfile = hubData.profiles.find((profile) => profile.discordUserId === session.discordUserId);
   const activitySession = useMemo<DiscordSession>(() => {
     if (!isPreviewingNonOwner) return { ...session, username: currentProfile?.robloxUsername || session.username };
+    const previewUsername = currentProfile?.robloxUsername || session.robloxUsername || session.username;
     return {
       ...session,
       discordUserId: previewDiscordUserId.trim() || "__preview_user__",
-      username: previewDiscordUserId.trim() ? `Preview ${previewDiscordUserId.trim()}` : `Preview ${role?.name || "User"}`,
+      username: previewUsername,
       avatarUrl: null,
     };
-  }, [currentProfile?.robloxUsername, isPreviewingNonOwner, previewDiscordUserId, role?.name, session]);
+  }, [currentProfile?.robloxUsername, isPreviewingNonOwner, previewDiscordUserId, session]);
   const [activeView, setActiveView] = useState<HubView>("home");
   const [activeCategoryId, setActiveCategoryId] = useState(visibleCategories[0]?.id || "");
   const [activeResourceId, setActiveResourceId] = useState("");
