@@ -67,6 +67,13 @@ function formatHeadingDate(date: Date) {
   return date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 }
 
+function formatDateTime(value?: string) {
+  if (!value) return "Unknown date";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown date";
+  return date.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
 function sameDay(first: Date, second: Date) {
   return first.getFullYear() === second.getFullYear() && first.getMonth() === second.getMonth() && first.getDate() === second.getDate();
 }
@@ -238,14 +245,14 @@ const adminPermissionLabels: Record<AdminPermission, string> = {
   create_announcements: "Create announcements",
   delete_announcements: "Delete announcements",
   view_audit_logs: "View audit logs",
-  manage_activity_logs: "Manage activity logs",
+  manage_activity_logs: "Log trainings and shifts",
   manage_category_links: "Manage category links",
-  manage_assignments: "Manage assignments",
+  manage_assignments: "Edit weekly requirements",
   manage_categories: "Manage categories",
   manage_home_links: "Manage home links",
   manage_admin_levels: "Manage admin levels",
   manage_admin_grants: "Grant admin levels",
-  manage_activity_slots: "Manage activity slots",
+  manage_activity_slots: "Edit training and shift times",
   view_recovery_bin: "View recovery bin",
   manage_recovery_bin: "Manage recovery bin",
   view_staff_activity: "View staff activity",
@@ -257,7 +264,7 @@ const permissionGroups: Array<{ title: string; permissions: AdminPermission[] }>
   { title: "Documents", permissions: ["create_resources", "edit_resources", "move_resources_to_bin", "copy_protected_content"] },
   { title: "Announcements & Links", permissions: ["create_announcements", "delete_announcements", "manage_home_links", "manage_category_links"] },
   { title: "Categories & Recovery", permissions: ["manage_categories", "view_recovery_bin", "restore_from_bin", "delete_permanently", "manage_recovery_bin"] },
-  { title: "Staff Activity", permissions: ["view_staff_activity", "view_corporate_lookup", "manage_activity_logs", "manage_assignments", "manage_activity_slots"] },
+  { title: "Activity & Lookup", permissions: ["view_staff_activity", "view_corporate_lookup", "manage_activity_logs", "manage_assignments", "manage_activity_slots"] },
   { title: "Admin Records", permissions: ["view_audit_logs", "manage_admin_levels", "manage_admin_grants"] },
 ];
 
@@ -368,7 +375,8 @@ export function HubClient({ session: initialSession, initialData }: { session: D
   const [activeResourceId, setActiveResourceId] = useState("");
   const [activityTab, setActivityTab] = useState<ActivityTab>("my");
   const canCopyProtectedContent = Boolean(role?.id === "owner" || effectiveAdminPermissionSet.has("copy_protected_content"));
-  const copyProtected = Boolean(role && !canCopyProtectedContent);
+  const canCopyCorporateLookup = Boolean(activeView === "staff-activity" && activityTab === "lookup" && role && role.level >= 40);
+  const copyProtected = Boolean(role && !canCopyProtectedContent && !canCopyCorporateLookup);
   const activeCategory = visibleCategories.find((category) => category.id === activeCategoryId) || visibleCategories[0];
   const activeResources = activeCategory?.resources.filter((resource) => !resource.deletedAt) || [];
   const activeCategoryLinks = activeCategory?.links?.filter((link) => !link.deletedAt) || [];
@@ -427,6 +435,7 @@ export function HubClient({ session: initialSession, initialData }: { session: D
 
   useEffect(() => {
     const blockedView =
+      (!role && activeView !== "home") ||
       (activeView === "staff-activity" && !canSeeStaffActivity) ||
       (activeView === "bin" && !canSeeRecoveryBin) ||
       (activeView === "audit" && !canSeeAuditLogs) ||
@@ -434,7 +443,7 @@ export function HubClient({ session: initialSession, initialData }: { session: D
 
     if (blockedView) setActiveView("home");
     if (!canManageCategories && categoryEditorState) setCategoryEditorState(null);
-  }, [activeView, canManageCategories, canSeeAdminUsers, canSeeAuditLogs, canSeeRecoveryBin, canSeeStaffActivity, categoryEditorState]);
+  }, [activeView, canManageCategories, canSeeAdminUsers, canSeeAuditLogs, canSeeRecoveryBin, canSeeStaffActivity, categoryEditorState, role]);
 
   function openCategory(categoryId: string) {
     setActiveCategoryId(categoryId);
@@ -859,7 +868,7 @@ export function HubClient({ session: initialSession, initialData }: { session: D
               onKeyDown={(event) => {
                 if (event.key === "Enter") event.currentTarget.blur();
               }}
-              placeholder="Optional preview Discord user ID"
+              placeholder="Enter preview user ID"
             />
             <p className="muted">{visibleCategories.length} visible categories. Team permissions control actions.</p>
             <p className="muted">{effectiveAdminPermissionSet.size} active permissions for this preview.</p>
@@ -907,17 +916,21 @@ export function HubClient({ session: initialSession, initialData }: { session: D
           }}
         />
         {activeView === "home" ? (
-          <HomeView
-            role={role}
-            visibleAnnouncements={visibleAnnouncements}
-            visibleQuickLinks={visibleQuickLinks}
-            openAnnouncementEditor={(announcementId) => setAnnouncementEditorState({ announcementId: announcementId || null })}
-            deleteAnnouncement={deleteAnnouncement}
-            openLinkManager={() => setLinkManagerOpen(true)}
-            canManageHomeLinks={canViewAdminTools(role) || effectiveAdminPermissionSet.has("manage_home_links")}
-            session={session}
-            adminPermissions={effectiveAdminPermissionSet}
-          />
+          role ? (
+            <HomeView
+              role={role}
+              visibleAnnouncements={visibleAnnouncements}
+              visibleQuickLinks={visibleQuickLinks}
+              openAnnouncementEditor={(announcementId) => setAnnouncementEditorState({ announcementId: announcementId || null })}
+              deleteAnnouncement={deleteAnnouncement}
+              openLinkManager={() => setLinkManagerOpen(true)}
+              canManageHomeLinks={canViewAdminTools(role) || effectiveAdminPermissionSet.has("manage_home_links")}
+              session={session}
+              adminPermissions={effectiveAdminPermissionSet}
+            />
+          ) : (
+            <NoGroupAccessView profile={currentProfile} />
+          )
         ) : null}
         {activeView === "category" && activeCategory ? (
           <CategoryView
@@ -2751,7 +2764,7 @@ function ActivityLogForm({
   const isTraining = slot.type === "training";
   const existingTrainingRoles = existingLog?.type === "training" ? existingLog.roles as TrainingRoles : null;
   const existingShiftRoles = existingLog?.type === "shift" ? existingLog.roles as ShiftRoles : null;
-  const [host, setHost] = useState(existingTrainingRoles?.host || existingShiftRoles?.host || session.username);
+  const [host, setHost] = useState(existingTrainingRoles?.host || existingShiftRoles?.host || "");
   const [coHost, setCoHost] = useState(existingTrainingRoles?.coHost || existingShiftRoles?.coHost || "");
   const [overseerOne, setOverseerOne] = useState(existingTrainingRoles?.overseers[0] || "");
   const [overseerTwo, setOverseerTwo] = useState(existingTrainingRoles?.overseers[1] || "");
@@ -2825,23 +2838,23 @@ function ActivityLogForm({
         <button className="button secondary" type="button" onClick={close}>Cancel</button>
       </div>
       <div className="activity-form-grid">
-        <label>Host<RobloxUserInput value={host} onChange={setHost} /></label>
-        <label>Co-Host<RobloxUserInput value={coHost} onChange={setCoHost} placeholder="Optional" /></label>
+        <label>Host<RobloxUserInput value={host} onChange={setHost} placeholder="Enter host username" /></label>
+        <label>Co-Host<RobloxUserInput value={coHost} onChange={setCoHost} placeholder="Enter co-host username" /></label>
         {isTraining ? (
           <>
-            <label className="split-field"><span>Overseers</span><div className="split-inputs"><RobloxUserInput value={overseerOne} onChange={setOverseerOne} placeholder="Optional" /><RobloxUserInput value={overseerTwo} onChange={setOverseerTwo} placeholder="Optional" /></div></label>
-            <label>Trainer A<RobloxUserInput value={trainerA} onChange={setTrainerA} placeholder="Optional" /></label>
-            <label className="split-field"><span>Assistant A</span><div className="split-inputs"><RobloxUserInput value={assistantAOne} onChange={setAssistantAOne} placeholder="Optional" /><RobloxUserInput value={assistantATwo} onChange={setAssistantATwo} placeholder="Optional" /></div></label>
-            <label>Trainer B<RobloxUserInput value={trainerB} onChange={setTrainerB} placeholder="Optional" /></label>
-            <label className="split-field"><span>Assistant B</span><div className="split-inputs"><RobloxUserInput value={assistantBOne} onChange={setAssistantBOne} placeholder="Optional" /><RobloxUserInput value={assistantBTwo} onChange={setAssistantBTwo} placeholder="Optional" /></div></label>
-            <label>Trainer C<RobloxUserInput value={trainerC} onChange={setTrainerC} placeholder="Optional" /></label>
-            <label className="split-field"><span>Assistant C</span><div className="split-inputs"><RobloxUserInput value={assistantCOne} onChange={setAssistantCOne} placeholder="Optional" /><RobloxUserInput value={assistantCTwo} onChange={setAssistantCTwo} placeholder="Optional" /></div></label>
+            <label className="split-field"><span>Overseers</span><div className="split-inputs"><RobloxUserInput value={overseerOne} onChange={setOverseerOne} placeholder="Enter username" /><RobloxUserInput value={overseerTwo} onChange={setOverseerTwo} placeholder="Enter username" /></div></label>
+            <label>Trainer A<RobloxUserInput value={trainerA} onChange={setTrainerA} placeholder="Enter trainer username" /></label>
+            <label className="split-field"><span>Assistant A</span><div className="split-inputs"><RobloxUserInput value={assistantAOne} onChange={setAssistantAOne} placeholder="Enter username" /><RobloxUserInput value={assistantATwo} onChange={setAssistantATwo} placeholder="Enter username" /></div></label>
+            <label>Trainer B<RobloxUserInput value={trainerB} onChange={setTrainerB} placeholder="Enter trainer username" /></label>
+            <label className="split-field"><span>Assistant B</span><div className="split-inputs"><RobloxUserInput value={assistantBOne} onChange={setAssistantBOne} placeholder="Enter username" /><RobloxUserInput value={assistantBTwo} onChange={setAssistantBTwo} placeholder="Enter username" /></div></label>
+            <label>Trainer C<RobloxUserInput value={trainerC} onChange={setTrainerC} placeholder="Enter trainer username" /></label>
+            <label className="split-field"><span>Assistant C</span><div className="split-inputs"><RobloxUserInput value={assistantCOne} onChange={setAssistantCOne} placeholder="Enter username" /><RobloxUserInput value={assistantCTwo} onChange={setAssistantCTwo} placeholder="Enter username" /></div></label>
           </>
         ) : (
-          <label className="split-field"><span>Attendees</span><div className="split-inputs"><RobloxUserInput value={attendeeOne} onChange={setAttendeeOne} placeholder="Optional" /><RobloxUserInput value={attendeeTwo} onChange={setAttendeeTwo} placeholder="Optional" /></div></label>
+          <label className="split-field"><span>Attendees</span><div className="split-inputs"><RobloxUserInput value={attendeeOne} onChange={setAttendeeOne} placeholder="Enter attendee username" /><RobloxUserInput value={attendeeTwo} onChange={setAttendeeTwo} placeholder="Enter attendee username" /></div></label>
         )}
       </div>
-      <label className="notes-field">Notes<textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} placeholder="Optional notes" /></label>
+      <label className="notes-field">Notes<textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} placeholder="Type notes here" /></label>
       {!isTraining ? <label className="notes-field">Credited minutes<input min={0} type="number" value={creditedMinutes} onChange={(event) => setCreditedMinutes(Number(event.target.value))} placeholder="0" /></label> : null}
       <div className="dialog-actions">
         <button className="button primary" type="submit">Save {isTraining ? "Training" : "Shift"} Log</button>
@@ -2900,7 +2913,6 @@ function TrainingServerPreview({ roles, notes, profiles }: { roles: TrainingRole
     <div className="assignment-lanes">
       <div className="assignment-lane">
         <h3>Oversight</h3>
-        <div className="role-line"><strong>Logger</strong><NamePills names={[roles.logger].filter(Boolean)} profiles={profiles} tone="logger" /></div>
         <div className="role-line"><strong>Overseers</strong><NamePills names={roles.overseers} profiles={profiles} tone="overseer" /></div>
       </div>
       <div className="assignment-lane">
@@ -2924,7 +2936,6 @@ function ShiftServerPreview({ roles, notes, profiles }: { roles: ShiftRoles; not
     <div className="assignment-lanes shift-lanes">
       <div className="assignment-lane">
         <h3>Shift Roles</h3>
-        <div className="role-line"><strong>Logger</strong><NamePills names={[roles.logger].filter(Boolean)} profiles={profiles} tone="logger" /></div>
         <div className="role-line"><strong>Host</strong><NamePills names={[roles.host].filter(Boolean)} profiles={profiles} tone="host" /></div>
         <div className="role-line"><strong>Co-Host</strong><NamePills names={[roles.coHost || ""].filter(Boolean)} profiles={profiles} tone="cohost" /></div>
         <div className="role-line"><strong>Attendees</strong><NamePills names={roles.attendees} profiles={profiles} tone="attendee" /></div>
@@ -3427,29 +3438,54 @@ function AdminUsersView({
         })}
         <article className="admin-card">
           <p className="eyebrow">Connected Profiles</p>
-          <h4>Recent Discord accounts</h4>
+          <h4>Recent Roblox accounts</h4>
           <div className="admin-grant-list">
             {profiles.length ? profiles.map((profile) => {
               const role = staffRoles.find((staffRole) => staffRole.id === profile.highestRoleId);
+              const robloxName = profile.robloxUsername || profile.robloxDisplayName || profile.discordUsername;
               return (
                 <div className="admin-grant-row profile-row" key={profile.discordUserId}>
                   {profile.robloxAvatarUrl ? <Image className="avatar" src={profile.robloxAvatarUrl} alt="" width={42} height={42} /> : null}
                   <div>
-                    <strong>{profile.discordUsername}</strong>
-                    <p className="muted">{role?.name || "No matching role"} - {profile.robloxUsername || "Roblox not linked"}</p>
+                    <strong>{robloxName}</strong>
+                    <p className="muted">{role?.name || "No matching Roblox group role"}</p>
                     {profile.robloxUserId ? <p className="muted">Roblox ID {profile.robloxUserId}</p> : null}
-                    <p className="muted">{profile.discordUserId}</p>
+                    <p className="muted">Joined {formatDateTime(profile.createdAt)}</p>
+                    <p className="muted">Last seen {formatDateTime(profile.lastSeenAt || profile.updatedAt)}</p>
                   </div>
                 </div>
               );
             }) : (
               <div>
                 <strong>No profile history yet</strong>
-                <p className="muted">Profiles appear here after staff sign in with Discord.</p>
+                <p className="muted">Profiles appear here after staff sign in with Roblox.</p>
               </div>
             )}
           </div>
         </article>
+      </div>
+    </section>
+  );
+}
+
+function NoGroupAccessView({ profile }: { profile?: StaffProfile }) {
+  return (
+    <section className="workspace access-panel">
+      <p className="eyebrow">Access check</p>
+      <h2>No matching Roblox group role</h2>
+      <p>
+        {profile?.robloxUsername || "This Roblox account"} is connected, but the site could not find a matching group rank for this profile.
+        Until the account has a matching rank, no private resources or staff tools are available.
+      </p>
+      <div className="access-panel-grid">
+        <div>
+          <strong>What they can see</strong>
+          <p className="muted">Only this access message and their connected account status.</p>
+        </div>
+        <div>
+          <strong>How to fix it</strong>
+          <p className="muted">Join the Roblox group or ask Leadership to check the account rank, then sign in again.</p>
+        </div>
       </div>
     </section>
   );
