@@ -68,6 +68,15 @@ export type StaffProfile = {
   createdAt: string;
   updatedAt: string;
   lastSeenAt: string;
+  achievementBadges?: AchievementBadge[];
+};
+
+export type AchievementBadgeId = "most_minutes" | "most_trainings" | "most_shifts";
+
+export type AchievementBadge = {
+  id: AchievementBadgeId;
+  awardedAt: string;
+  value?: number;
 };
 
 export type WeeklyAssignment = {

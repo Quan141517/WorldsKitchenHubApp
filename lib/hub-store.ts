@@ -1,6 +1,6 @@
 import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { activitySlots, adminLevels, adminPermissions, activityMinuteEntries, createInitialHubData, teamPermissions, weeklyAssignments, type AdminLevel, type AdminPermission, type AuditLog, type HubData, type Resource, type StaffProfile, type TeamPermissionGrant } from "./mock-data";
+import { activitySlots, adminLevels, adminPermissions, activityMinuteEntries, createInitialHubData, teamPermissions, weeklyAssignments, type AchievementBadgeId, type AdminLevel, type AdminPermission, type AuditLog, type HubData, type Resource, type StaffProfile, type TeamPermissionGrant } from "./mock-data";
 import type { StaffRoleId } from "./roles";
 import type { DiscordSession } from "./session";
 import { createSupabaseServerClient, isSupabaseConfigured } from "./supabase";
@@ -119,7 +119,7 @@ export function createSlug(value: string) {
 function normalizeHubData(data: HubData): HubData {
   return {
     ...data,
-    profiles: data.profiles || [],
+    profiles: (data.profiles || []).map((profile) => ({ ...profile, achievementBadges: profile.achievementBadges || [] })),
     categories: (data.categories || []).map((category) => ({
       ...category,
       links: (category.links || []).map((link) => ({
@@ -195,8 +195,79 @@ export function getResourceExcerpt(contentHtml: string) {
 export async function updateHubData(mutator: (data: HubData) => HubData | void) {
   const data = await readHubData();
   const nextData = mutator(data) || data;
+  syncAchievementBadges(nextData);
   await writeHubData(nextData);
   return nextData;
+}
+
+function syncAchievementBadges(data: HubData) {
+  awardTopMinuteBadges(data);
+  awardTopLogBadges(data, "training", "most_trainings");
+  awardTopLogBadges(data, "shift", "most_shifts");
+}
+
+function awardTopMinuteBadges(data: HubData) {
+  const totals = new Map<string, { value: number; userId?: string; username: string }>();
+
+  for (const entry of data.activityMinuteEntries || []) {
+    const key = entry.robloxUserId || entry.robloxUsername.toLowerCase();
+    const current = totals.get(key) || { value: 0, userId: entry.robloxUserId, username: entry.robloxUsername };
+    current.value += entry.minutes;
+    totals.set(key, current);
+  }
+
+  const topValue = Math.max(0, ...Array.from(totals.values()).map((item) => item.value));
+  if (!topValue) return;
+
+  for (const winner of totals.values()) {
+    if (winner.value !== topValue) continue;
+    const profile = data.profiles.find((item) =>
+      item.robloxUserId === winner.userId ||
+      item.robloxUsername?.toLowerCase() === winner.username.toLowerCase() ||
+      item.discordUsername.toLowerCase() === winner.username.toLowerCase()
+    );
+    if (profile) grantAchievementBadge(profile, "most_minutes", winner.value);
+  }
+}
+
+function awardTopLogBadges(data: HubData, type: "training" | "shift", badgeId: AchievementBadgeId) {
+  const totals = new Map<string, number>();
+
+  for (const log of data.activityLogs || []) {
+    if (log.deletedAt || log.type !== type) continue;
+    for (const name of getActivityLogNames(log.roles)) {
+      const key = name.toLowerCase();
+      totals.set(key, (totals.get(key) || 0) + 1);
+    }
+  }
+
+  const topValue = Math.max(0, ...Array.from(totals.values()));
+  if (!topValue) return;
+
+  for (const [name, value] of totals) {
+    if (value !== topValue) continue;
+    const profile = data.profiles.find((item) =>
+      item.robloxUsername?.toLowerCase() === name ||
+      item.robloxDisplayName?.toLowerCase() === name ||
+      item.discordUsername.toLowerCase() === name
+    );
+    if (profile) grantAchievementBadge(profile, badgeId, value);
+  }
+}
+
+function getActivityLogNames(roles: HubData["activityLogs"][number]["roles"]) {
+  const values = Object.values(roles).flatMap((value) => Array.isArray(value) ? value : [value]);
+  return Array.from(new Set(values.map((value) => String(value || "").trim()).filter(Boolean)));
+}
+
+function grantAchievementBadge(profile: StaffProfile, id: AchievementBadgeId, value: number) {
+  const badges = profile.achievementBadges || [];
+  if (badges.some((badge) => badge.id === id)) {
+    profile.achievementBadges = badges;
+    return;
+  }
+
+  profile.achievementBadges = [...badges, { id, value, awardedAt: new Date().toISOString() }];
 }
 
 export function addAuditLog(data: HubData, entry: Omit<AuditLog, "id" | "createdAt">) {
@@ -254,6 +325,7 @@ export async function upsertStaffProfile(session: DiscordSession) {
       createdAt: existing?.createdAt || now,
       updatedAt: now,
       lastSeenAt: now,
+      achievementBadges: existing?.achievementBadges || [],
     };
 
     if (existing) {

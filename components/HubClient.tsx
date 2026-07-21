@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { activitySlots, adminPermissions, type ActivityLog, type ActivityMinuteEntry, type ActivitySlots, type AdminPermission, type AuditLog, type Category, type HubData, type QuickLink, type Resource, type RoleOverride, type ShiftRoles, type StaffProfile, type TeamPermissionGrant, type TrainingRoles, type WeeklyAssignment } from "@/lib/mock-data";
+import { activitySlots, adminPermissions, type AchievementBadgeId, type ActivityLog, type ActivityMinuteEntry, type ActivitySlots, type AdminPermission, type AuditLog, type Category, type HubData, type QuickLink, type Resource, type RoleOverride, type ShiftRoles, type StaffProfile, type TeamPermissionGrant, type TrainingRoles, type WeeklyAssignment } from "@/lib/mock-data";
 import { staffRoles, type StaffRole, type StaffRoleId } from "@/lib/roles";
 import type { DiscordSession } from "@/lib/session";
 
@@ -1029,9 +1029,10 @@ export function HubClient({ session: initialSession, initialData }: { session: D
               deleteAnnouncement={deleteAnnouncement}
               openLinkManager={() => setLinkManagerOpen(true)}
               canManageHomeLinks={canViewAdminTools(role) || effectiveAdminPermissionSet.has("manage_home_links")}
-              session={session}
-              adminPermissions={effectiveAdminPermissionSet}
-            />
+            session={session}
+            profile={currentProfile}
+            adminPermissions={effectiveAdminPermissionSet}
+          />
           ) : (
             <NoGroupAccessView profile={currentProfile} />
           )
@@ -1238,6 +1239,7 @@ function HomeView({
   openLinkManager,
   canManageHomeLinks,
   session,
+  profile,
   adminPermissions,
 }: {
   role: StaffRole | null;
@@ -1248,6 +1250,7 @@ function HomeView({
   openLinkManager: () => void;
   canManageHomeLinks: boolean;
   session: DiscordSession;
+  profile?: StaffProfile;
   adminPermissions: Set<AdminPermission>;
 }) {
   const canDeleteAnnouncements = Boolean(role?.id === "owner" || adminPermissions.has("delete_announcements"));
@@ -1263,7 +1266,7 @@ function HomeView({
           <h3>Welcome to your staff workspace.</h3>
           <p>Find official resources, internal guides, and important links in one organized place.</p>
         </div>
-        <RoyalBadge session={session} role={role} />
+        <RoyalBadge session={session} role={role} profile={profile} />
       </div>
       <div className="section-block">
         <div className="content-header">
@@ -1542,10 +1545,17 @@ function CategoryLinkManager({
   );
 }
 
-function RoyalBadge({ session, role }: { session: DiscordSession; role: StaffRole | null }) {
+const achievementBadgeLabels: Record<AchievementBadgeId, { label: string; title: string }> = {
+  most_minutes: { label: "Mins", title: "Most Minutes" },
+  most_trainings: { label: "Train", title: "Most Trainings" },
+  most_shifts: { label: "Shift", title: "Most Shifts" },
+};
+
+function RoyalBadge({ session, role, profile }: { session: DiscordSession; role: StaffRole | null; profile?: StaffProfile }) {
   const username = session.robloxUsername || session.username;
   const rankName = role?.name || "No matching role";
   const avatarUrl = session.robloxAvatarUrl || session.avatarUrl;
+  const badges = (profile?.achievementBadges || []).slice(0, 3);
 
   return (
     <article className={`royal-badge rank-${role?.id || "none"}`} title={`${username} - ${rankName}`} onCopy={(event) => event.preventDefault()} onContextMenu={(event) => event.preventDefault()}>
@@ -1556,6 +1566,14 @@ function RoyalBadge({ session, role }: { session: DiscordSession; role: StaffRol
         <p>World&apos;s Kitchen Badge</p>
         <strong>{username}</strong>
         <span>{rankName}</span>
+        {badges.length ? (
+          <div className="achievement-badges" aria-label="Achievement badges">
+            {badges.map((badge) => {
+              const metadata = achievementBadgeLabels[badge.id];
+              return <em title={metadata.title} key={badge.id}>{metadata.label}</em>;
+            })}
+          </div>
+        ) : null}
       </div>
       <div className="royal-ribbon" aria-hidden="true" />
     </article>

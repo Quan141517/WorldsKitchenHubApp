@@ -455,6 +455,27 @@ h3 {
   padding: 4px 9px;
 }
 
+.achievement-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 3px;
+}
+
+.achievement-badges em {
+  display: inline-flex;
+  min-width: 34px;
+  justify-content: center;
+  border: 1px solid rgba(23, 50, 77, 0.12);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #e9fbff, #fff8dd);
+  color: #0f5c72;
+  font-size: 0.66rem;
+  font-style: normal;
+  font-weight: 900;
+  padding: 3px 7px;
+}
+
 .royal-badge::before,
 .royal-badge::after {
   content: "";
