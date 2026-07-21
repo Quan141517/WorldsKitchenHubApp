@@ -200,10 +200,19 @@ export async function updateHubData(mutator: (data: HubData) => HubData | void) 
   return nextData;
 }
 
+export async function refreshAchievementBadges() {
+  const data = await readHubData();
+  const changed = syncAchievementBadges(data);
+  if (changed) await writeHubData(data);
+  return data;
+}
+
 function syncAchievementBadges(data: HubData) {
-  awardTopMinuteBadges(data);
-  awardTopLogBadges(data, "training", "most_trainings");
-  awardTopLogBadges(data, "shift", "most_shifts");
+  let changed = false;
+  changed = awardTopMinuteBadges(data) || changed;
+  changed = awardTopLogBadges(data, "training", "most_trainings") || changed;
+  changed = awardTopLogBadges(data, "shift", "most_shifts") || changed;
+  return changed;
 }
 
 function awardTopMinuteBadges(data: HubData) {
@@ -217,8 +226,9 @@ function awardTopMinuteBadges(data: HubData) {
   }
 
   const topValue = Math.max(0, ...Array.from(totals.values()).map((item) => item.value));
-  if (!topValue) return;
+  if (!topValue) return false;
 
+  let changed = false;
   for (const winner of totals.values()) {
     if (winner.value !== topValue) continue;
     const profile = data.profiles.find((item) =>
@@ -226,8 +236,10 @@ function awardTopMinuteBadges(data: HubData) {
       item.robloxUsername?.toLowerCase() === winner.username.toLowerCase() ||
       item.discordUsername.toLowerCase() === winner.username.toLowerCase()
     );
-    if (profile) grantAchievementBadge(profile, "most_minutes", winner.value);
+    if (profile) changed = grantAchievementBadge(profile, "most_minutes", winner.value) || changed;
   }
+
+  return changed;
 }
 
 function awardTopLogBadges(data: HubData, type: "training" | "shift", badgeId: AchievementBadgeId) {
@@ -242,8 +254,9 @@ function awardTopLogBadges(data: HubData, type: "training" | "shift", badgeId: A
   }
 
   const topValue = Math.max(0, ...Array.from(totals.values()));
-  if (!topValue) return;
+  if (!topValue) return false;
 
+  let changed = false;
   for (const [name, value] of totals) {
     if (value !== topValue) continue;
     const profile = data.profiles.find((item) =>
@@ -251,8 +264,10 @@ function awardTopLogBadges(data: HubData, type: "training" | "shift", badgeId: A
       item.robloxDisplayName?.toLowerCase() === name ||
       item.discordUsername.toLowerCase() === name
     );
-    if (profile) grantAchievementBadge(profile, badgeId, value);
+    if (profile) changed = grantAchievementBadge(profile, badgeId, value) || changed;
   }
+
+  return changed;
 }
 
 function getActivityLogNames(roles: HubData["activityLogs"][number]["roles"]) {
@@ -264,10 +279,11 @@ function grantAchievementBadge(profile: StaffProfile, id: AchievementBadgeId, va
   const badges = profile.achievementBadges || [];
   if (badges.some((badge) => badge.id === id)) {
     profile.achievementBadges = badges;
-    return;
+    return false;
   }
 
   profile.achievementBadges = [...badges, { id, value, awardedAt: new Date().toISOString() }];
+  return true;
 }
 
 export function addAuditLog(data: HubData, entry: Omit<AuditLog, "id" | "createdAt">) {

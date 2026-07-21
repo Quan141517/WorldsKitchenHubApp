@@ -468,12 +468,22 @@ h3 {
   justify-content: center;
   border: 1px solid rgba(23, 50, 77, 0.12);
   border-radius: 999px;
-  background: linear-gradient(180deg, #e9fbff, #fff8dd);
-  color: #0f5c72;
   font-size: 0.66rem;
   font-style: normal;
   font-weight: 900;
   padding: 3px 7px;
+}
+
+.achievement-badges em.earned {
+  background: linear-gradient(180deg, #e9fbff, #fff8dd);
+  color: #0f5c72;
+  box-shadow: 0 4px 10px rgba(34, 116, 138, 0.12);
+}
+
+.achievement-badges em.locked {
+  border-style: dashed;
+  background: rgba(255, 255, 255, 0.46);
+  color: rgba(122, 88, 27, 0.48);
 }
 
 .royal-badge::before,

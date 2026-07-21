@@ -1551,11 +1551,13 @@ const achievementBadgeLabels: Record<AchievementBadgeId, { label: string; title:
   most_shifts: { label: "Shift", title: "Most Shifts" },
 };
 
+const achievementBadgeOrder: AchievementBadgeId[] = ["most_minutes", "most_trainings", "most_shifts"];
+
 function RoyalBadge({ session, role, profile }: { session: DiscordSession; role: StaffRole | null; profile?: StaffProfile }) {
   const username = session.robloxUsername || session.username;
   const rankName = role?.name || "No matching role";
   const avatarUrl = session.robloxAvatarUrl || session.avatarUrl;
-  const badges = (profile?.achievementBadges || []).slice(0, 3);
+  const earnedBadges = new Set((profile?.achievementBadges || []).map((badge) => badge.id));
 
   return (
     <article className={`royal-badge rank-${role?.id || "none"}`} title={`${username} - ${rankName}`} onCopy={(event) => event.preventDefault()} onContextMenu={(event) => event.preventDefault()}>
@@ -1566,14 +1568,17 @@ function RoyalBadge({ session, role, profile }: { session: DiscordSession; role:
         <p>World&apos;s Kitchen Badge</p>
         <strong>{username}</strong>
         <span>{rankName}</span>
-        {badges.length ? (
-          <div className="achievement-badges" aria-label="Achievement badges">
-            {badges.map((badge) => {
-              const metadata = achievementBadgeLabels[badge.id];
-              return <em title={metadata.title} key={badge.id}>{metadata.label}</em>;
-            })}
-          </div>
-        ) : null}
+        <div className="achievement-badges" aria-label="Achievement badges">
+          {achievementBadgeOrder.map((badgeId) => {
+            const metadata = achievementBadgeLabels[badgeId];
+            const earned = earnedBadges.has(badgeId);
+            return (
+              <em className={earned ? "earned" : "locked"} title={earned ? metadata.title : `${metadata.title} not earned yet`} key={badgeId}>
+                {metadata.label}
+              </em>
+            );
+          })}
+        </div>
       </div>
       <div className="royal-ribbon" aria-hidden="true" />
     </article>
