@@ -443,6 +443,13 @@ h3 {
   white-space: nowrap;
 }
 
+.royal-rank-row {
+  display: flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 7px;
+}
+
 .royal-badge-copy span {
   display: inline-flex;
   max-width: 100%;
@@ -461,7 +468,7 @@ h3 {
   align-items: center;
   gap: 5px;
   height: 14px;
-  margin-top: 1px;
+  margin-top: 0;
 }
 
 .achievement-badges em {

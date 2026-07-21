@@ -1567,20 +1567,22 @@ function RoyalBadge({ session, role, profile }: { session: DiscordSession; role:
       <div className="royal-badge-copy">
         <p>World&apos;s Kitchen Badge</p>
         <strong>{username}</strong>
-        <span>{rankName}</span>
-        <div className="achievement-badges" aria-label="Achievement badges">
-          {achievementBadgeOrder.map((badgeId) => {
-            const metadata = achievementBadgeLabels[badgeId];
-            const earned = earnedBadges.has(badgeId);
-            return (
-              <em
-                aria-label={earned ? metadata.title : `${metadata.title} not earned yet`}
-                className={`${earned ? "earned" : "locked"} badge-${badgeId}`}
-                title={earned ? metadata.title : `${metadata.title} not earned yet`}
-                key={badgeId}
-              />
-            );
-          })}
+        <div className="royal-rank-row">
+          <span>{rankName}</span>
+          <div className="achievement-badges" aria-label="Achievement badges">
+            {achievementBadgeOrder.map((badgeId) => {
+              const metadata = achievementBadgeLabels[badgeId];
+              const earned = earnedBadges.has(badgeId);
+              return (
+                <em
+                  aria-label={earned ? metadata.title : `${metadata.title} not earned yet`}
+                  className={`${earned ? "earned" : "locked"} badge-${badgeId}`}
+                  title={earned ? metadata.title : `${metadata.title} not earned yet`}
+                  key={badgeId}
+                />
+              );
+            })}
+          </div>
         </div>
       </div>
       <div className="royal-ribbon" aria-hidden="true" />
