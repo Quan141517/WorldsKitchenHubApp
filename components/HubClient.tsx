@@ -381,9 +381,9 @@ export function HubClient({ session: initialSession, initialData }: { session: D
   const previewAdminPermissionSet = useMemo(() => getRoleAdminPermissions(hubData, previewRoleId || previewProfileRole?.id || sessionRole?.id), [hubData, previewProfileRole?.id, previewRoleId, sessionRole?.id]);
   const isPreviewingNonOwner = Boolean(sessionRole?.id === "owner" && (previewRoleId || previewProfile) && role?.id !== "owner");
   const effectiveAdminPermissionSet = useMemo(() => {
-    if (sessionRole?.id === "owner" && previewRoleId) return previewAdminPermissionSet;
+    if (sessionRole?.id === "owner" && (previewRoleId || previewProfile)) return previewAdminPermissionSet;
     return isPreviewingNonOwner ? new Set<AdminPermission>() : adminPermissionSet;
-  }, [adminPermissionSet, isPreviewingNonOwner, previewAdminPermissionSet, previewRoleId, sessionRole?.id]);
+  }, [adminPermissionSet, isPreviewingNonOwner, previewAdminPermissionSet, previewProfile, previewRoleId, sessionRole?.id]);
   const currentProfile = hubData.profiles.find((profile) => profile.discordUserId === session.discordUserId);
   const activitySession = useMemo<DiscordSession>(() => {
     if (!isPreviewingNonOwner) return { ...session, username: currentProfile?.robloxUsername || session.username };
