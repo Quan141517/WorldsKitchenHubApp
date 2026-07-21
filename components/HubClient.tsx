@@ -236,6 +236,16 @@ const robloxRankRanges: Array<{ roleId: StaffRoleId; min: number; max: number }>
   { roleId: "owner", min: 255, max: 255 },
 ];
 
+function getStaffRoleFromSavedProfile(profile: StaffProfile | null) {
+  if (!profile) return null;
+  const savedRole = staffRoles.find((staffRole) => staffRole.id === profile.highestRoleId);
+  if (savedRole) return savedRole;
+  const rank = profile.robloxRoleRank;
+  if (rank === 255) return staffRoles.find((staffRole) => staffRole.id === "owner") || null;
+  const range = robloxRankRanges.find((item) => rank !== undefined && rank >= item.min && rank <= item.max && item.roleId !== "owner");
+  return range ? staffRoles.find((staffRole) => staffRole.id === range.roleId) || null : null;
+}
+
 const adminPermissionLabels: Record<AdminPermission, string> = {
   create_resources: "Create resources",
   edit_resources: "Edit resources",
@@ -358,7 +368,7 @@ export function HubClient({ session: initialSession, initialData }: { session: D
       profile.robloxDisplayName?.toLowerCase() === previewId
     ) || null;
   }, [hubData.profiles, previewDiscordUserId]);
-  const previewProfileRole = previewProfile ? staffRoles.find((staffRole) => staffRole.id === previewProfile.highestRoleId) || null : null;
+  const previewProfileRole = getStaffRoleFromSavedProfile(previewProfile);
   const role = sessionRole?.id === "owner"
     ? previewRoleId
       ? staffRoles.find((staffRole) => staffRole.id === previewRoleId) || sessionRole
@@ -3195,19 +3205,17 @@ function LeaderboardsPanel({ session, profiles, activityLogs, activityMinuteEntr
       format: (value: number) => pluralize(value, "log"),
     },
   ];
+  const weekTitle = weekOffset === 0 ? "This week" : weekOffset === -1 ? "Last week" : "2 weeks ago";
 
   return (
     <div className="leaderboard-panel">
       <div className="leaderboard-week-switcher">
-        {[
-          { label: "This week", value: 0 },
-          { label: "Last week", value: -1 },
-          { label: "2 weeks ago", value: -2 },
-        ].map((option) => (
-          <button className={weekOffset === option.value ? "activity-tab active" : "activity-tab"} type="button" key={option.value} onClick={() => setWeekOffset(option.value)}>
-            {option.label}
-          </button>
-        ))}
+        <button className="week-arrow" type="button" disabled={weekOffset <= -2} onClick={() => setWeekOffset((offset) => Math.max(-2, offset - 1))}>‹</button>
+        <div>
+          <strong>{weekTitle}</strong>
+          <span>{formatShortDate(weekStart)} - {formatShortDate(addDays(weekEnd, -1))}</span>
+        </div>
+        <button className="week-arrow" type="button" disabled={weekOffset >= 0} onClick={() => setWeekOffset((offset) => Math.min(0, offset + 1))}>›</button>
       </div>
       <div className="leaderboard-grid">
         {boards.map((board, index) => {

@@ -1835,8 +1835,28 @@ h3 {
 
 .leaderboard-week-switcher {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
   gap: 10px;
+}
+
+.leaderboard-week-switcher > div {
+  display: grid;
+  min-width: 190px;
+  justify-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffefa;
+  padding: 9px 14px;
+}
+
+.leaderboard-week-switcher strong {
+  color: var(--ink);
+}
+
+.leaderboard-week-switcher span {
+  color: var(--muted);
+  font-size: 0.82rem;
 }
 
 .button.tiny {
