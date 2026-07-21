@@ -1555,7 +1555,7 @@ function RoyalBadge({ session, role }: { session: DiscordSession; role: StaffRol
         </span>
       </div>
       <div className="royal-badge-copy">
-        <p>Royal Badge</p>
+        <p>WK Badge</p>
         <strong>{username}</strong>
         <span>{rankName}</span>
       </div>
