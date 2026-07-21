@@ -1262,6 +1262,7 @@ function HomeView({
         <h3>Welcome to your staff workspace.</h3>
         <p>Find official resources, internal guides, and important links in one organized place.</p>
       </div>
+      <RoyalBadge session={session} role={role} />
       <div className="section-block">
         <div className="content-header">
           <div>
@@ -1536,6 +1537,25 @@ function CategoryLinkManager({
         </div>
       </form>
     </div>
+  );
+}
+
+function RoyalBadge({ session, role }: { session: DiscordSession; role: StaffRole | null }) {
+  const username = session.robloxUsername || session.username;
+  const rankName = role?.name || "No matching role";
+
+  return (
+    <article className={`royal-badge rank-${role?.id || "none"}`}>
+      <div className="royal-emblem" aria-hidden="true">
+        <span />
+      </div>
+      <div className="royal-badge-copy">
+        <p className="eyebrow">Royal Badge</p>
+        <h3>{username}</h3>
+        <p>{rankName}</p>
+      </div>
+      <div className="royal-badge-glow" aria-hidden="true" />
+    </article>
   );
 }
 
