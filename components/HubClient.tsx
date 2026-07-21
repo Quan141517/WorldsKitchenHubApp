@@ -1258,11 +1258,13 @@ function HomeView({
   return (
     <section className="home-view">
       <div className="home-hero">
-        <p className="eyebrow">World&apos;s Kitchen Hub</p>
-        <h3>Welcome to your staff workspace.</h3>
-        <p>Find official resources, internal guides, and important links in one organized place.</p>
+        <div>
+          <p className="eyebrow">World&apos;s Kitchen Hub</p>
+          <h3>Welcome to your staff workspace.</h3>
+          <p>Find official resources, internal guides, and important links in one organized place.</p>
+        </div>
+        <RoyalBadge session={session} role={role} />
       </div>
-      <RoyalBadge session={session} role={role} />
       <div className="section-block">
         <div className="content-header">
           <div>
@@ -1545,20 +1547,11 @@ function RoyalBadge({ session, role }: { session: DiscordSession; role: StaffRol
   const rankName = role?.name || "No matching role";
 
   return (
-    <article className={`royal-badge rank-${role?.id || "none"}`}>
+    <article className={`royal-badge rank-${role?.id || "none"}`} title={`${username} - ${rankName}`}>
       <div className="royal-emblem" aria-hidden="true">
         <span />
       </div>
-      <div className="royal-badge-copy">
-        <p className="eyebrow">Royal Badge</p>
-        <h3>{username}</h3>
-        <p>{rankName}</p>
-        <div className="royal-badge-slots" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </div>
-      </div>
+      <span className="sr-only">{username} - {rankName}</span>
     </article>
   );
 }
