@@ -458,32 +458,138 @@ h3 {
 .achievement-badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 3px;
+  gap: 4px;
+  margin-top: 2px;
 }
 
 .achievement-badges em {
+  position: relative;
   display: inline-flex;
-  min-width: 34px;
+  width: 18px;
+  height: 18px;
+  align-items: center;
   justify-content: center;
   border: 1px solid rgba(23, 50, 77, 0.12);
-  border-radius: 999px;
-  font-size: 0.66rem;
+  border-radius: 50%;
   font-style: normal;
-  font-weight: 900;
-  padding: 3px 7px;
+  padding: 0;
+  transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
 }
 
 .achievement-badges em.earned {
-  background: linear-gradient(180deg, #e9fbff, #fff8dd);
-  color: #0f5c72;
-  box-shadow: 0 4px 10px rgba(34, 116, 138, 0.12);
+  box-shadow: 0 4px 10px rgba(31, 41, 51, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.46);
+}
+
+.achievement-badges em.earned:hover {
+  transform: translateY(-1px);
 }
 
 .achievement-badges em.locked {
   border-style: dashed;
   background: rgba(255, 255, 255, 0.46);
-  color: rgba(122, 88, 27, 0.48);
+  opacity: 0.54;
+}
+
+.achievement-badges em::before,
+.achievement-badges em::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.achievement-badges .badge-most_minutes {
+  background: rgba(159, 122, 234, 0.12);
+  border-color: rgba(159, 122, 234, 0.24);
+}
+
+.achievement-badges .badge-most_minutes.earned {
+  background: linear-gradient(135deg, #bda2ff, #7654ce);
+  border-color: rgba(118, 84, 206, 0.38);
+}
+
+.achievement-badges .badge-most_minutes::before {
+  width: 9px;
+  height: 9px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  color: #7654ce;
+}
+
+.achievement-badges .badge-most_minutes::after {
+  width: 5px;
+  height: 5px;
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  color: #7654ce;
+  transform: translate(1px, -1px) rotate(-45deg);
+}
+
+.achievement-badges .badge-most_minutes.earned::before,
+.achievement-badges .badge-most_minutes.earned::after {
+  color: #fff;
+}
+
+.achievement-badges .badge-most_trainings {
+  background: rgba(19, 185, 129, 0.1);
+  border-color: rgba(19, 185, 129, 0.24);
+}
+
+.achievement-badges .badge-most_trainings.earned {
+  background: linear-gradient(135deg, #7de2c5, #13b981);
+  border-color: rgba(15, 118, 110, 0.34);
+}
+
+.achievement-badges .badge-most_trainings::before {
+  width: 12px;
+  height: 7px;
+  background: currentColor;
+  clip-path: polygon(50% 0, 100% 34%, 84% 100%, 16% 100%, 0 34%);
+  color: #0f766e;
+}
+
+.achievement-badges .badge-most_trainings::after {
+  width: 8px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  color: #0f766e;
+  transform: translateY(5px);
+}
+
+.achievement-badges .badge-most_trainings.earned::before,
+.achievement-badges .badge-most_trainings.earned::after {
+  color: #fff;
+}
+
+.achievement-badges .badge-most_shifts {
+  background: rgba(76, 157, 241, 0.11);
+  border-color: rgba(76, 157, 241, 0.25);
+}
+
+.achievement-badges .badge-most_shifts.earned {
+  background: linear-gradient(135deg, #8dc8ff, #4c9df1);
+  border-color: rgba(38, 99, 168, 0.34);
+}
+
+.achievement-badges .badge-most_shifts::before {
+  width: 10px;
+  height: 11px;
+  border: 2px solid currentColor;
+  border-radius: 2px;
+  color: #2663a8;
+}
+
+.achievement-badges .badge-most_shifts::after {
+  width: 10px;
+  height: 2px;
+  background: currentColor;
+  color: #2663a8;
+  transform: translateY(-3px);
+}
+
+.achievement-badges .badge-most_shifts.earned::before,
+.achievement-badges .badge-most_shifts.earned::after {
+  color: #fff;
 }
 
 .royal-badge::before,

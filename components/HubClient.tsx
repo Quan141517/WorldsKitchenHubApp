@@ -1573,9 +1573,12 @@ function RoyalBadge({ session, role, profile }: { session: DiscordSession; role:
             const metadata = achievementBadgeLabels[badgeId];
             const earned = earnedBadges.has(badgeId);
             return (
-              <em className={earned ? "earned" : "locked"} title={earned ? metadata.title : `${metadata.title} not earned yet`} key={badgeId}>
-                {metadata.label}
-              </em>
+              <em
+                aria-label={earned ? metadata.title : `${metadata.title} not earned yet`}
+                className={`${earned ? "earned" : "locked"} badge-${badgeId}`}
+                title={earned ? metadata.title : `${metadata.title} not earned yet`}
+                key={badgeId}
+              />
             );
           })}
         </div>
