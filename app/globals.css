@@ -316,94 +316,76 @@ h3 {
 .royal-badge {
   position: relative;
   display: grid;
-  grid-template-columns: auto minmax(128px, 1fr);
-  gap: 12px;
+  grid-template-columns: auto minmax(150px, 1fr);
+  gap: 0;
   align-items: center;
-  width: min(340px, 100%);
-  min-height: 124px;
+  width: min(360px, 100%);
+  min-height: 112px;
   justify-self: end;
   align-self: center;
   margin-right: clamp(0px, 1vw, 12px);
 }
 
-.royal-emblem {
+.royal-medallion {
   position: relative;
   display: grid;
-  width: 124px;
-  height: 120px;
+  width: 104px;
+  height: 104px;
   place-items: center;
-  filter: drop-shadow(0 12px 16px rgba(82, 57, 18, 0.18));
-}
-
-.royal-emblem::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: 84px;
-  height: 52px;
+  border: 3px solid rgba(158, 108, 31, 0.86);
+  border-radius: 999px;
   background:
-    radial-gradient(circle at 50% 14%, #fff9df 0 5%, transparent 6%),
-    radial-gradient(circle at 30% 45%, rgba(255, 255, 255, 0.48), transparent 18%),
-    linear-gradient(180deg, #fff0b8 0%, #d39b37 100%);
-  clip-path: polygon(8% 100%, 92% 100%, 88% 48%, 76% 62%, 68% 27%, 59% 55%, 50% 7%, 41% 55%, 32% 27%, 24% 62%, 12% 48%);
-  transform: translateX(-50%);
-  box-shadow: inset 0 -4px 0 rgba(118, 76, 23, 0.18);
-}
-
-.royal-emblem::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  width: 72px;
-  height: 22px;
-  border-bottom: 3px double rgba(156, 112, 40, 0.54);
-  border-radius: 0 0 52px 52px;
-  transform: translateX(-50%);
-  box-shadow: 0 5px 0 -3px rgba(255, 244, 211, 0.9);
-}
-
-.royal-emblem span {
-  position: absolute;
-  top: 38px;
-  left: 50%;
-  display: grid;
-  width: 88px;
-  height: 82px;
-  place-items: center;
-  overflow: hidden;
-  border: 2px solid rgba(156, 112, 40, 0.88);
-  border-radius: 30px 30px 36px 36px;
-  background:
-    linear-gradient(180deg, rgba(255, 254, 244, 0.98), rgba(255, 247, 224, 0.96)),
-    radial-gradient(circle at 50% 24%, rgba(255, 255, 255, 0.64), transparent 34%),
-    radial-gradient(circle at center, rgba(211, 155, 55, 0.12), transparent 60%);
-  clip-path: polygon(50% 100%, 6% 77%, 7% 17%, 50% 0, 93% 17%, 94% 77%);
-  transform: translateX(-50%);
+    radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.86), transparent 23%),
+    linear-gradient(145deg, #fff0b7 0%, #d69a31 48%, #8f5f17 100%);
   box-shadow:
-    inset 0 0 0 5px rgba(255, 255, 255, 0.58),
-    inset 0 -12px 22px rgba(211, 155, 55, 0.1),
-    0 8px 18px rgba(82, 57, 18, 0.13);
+    inset 0 0 0 5px rgba(255, 255, 255, 0.36),
+    0 14px 24px rgba(80, 52, 17, 0.2);
+  z-index: 2;
+}
+
+.royal-medallion::before {
+  content: "";
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  width: 72px;
+  height: 36px;
+  background:
+    radial-gradient(circle at 50% 15%, #fff8d6 0 6%, transparent 7%),
+    linear-gradient(180deg, #fff2bc 0%, #d9a13e 100%);
+  clip-path: polygon(4% 100%, 96% 100%, 90% 28%, 72% 58%, 60% 15%, 50% 54%, 40% 15%, 28% 58%, 10% 28%);
+  transform: translateX(-50%);
+  filter: drop-shadow(0 5px 5px rgba(92, 58, 17, 0.16));
+}
+
+.royal-medallion::after {
+  content: "";
+  position: absolute;
+  inset: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  border-radius: 999px;
 }
 
 .royal-avatar {
-  position: relative;
+  position: absolute;
   z-index: 1;
-  width: 58px;
-  height: 58px;
-  border: 2px solid rgba(255, 255, 255, 0.88);
+  left: 50%;
+  top: 50%;
+  width: 72px;
+  height: 72px;
+  overflow: hidden;
   border-radius: 999px;
   object-fit: cover;
-  box-shadow: 0 8px 14px rgba(82, 57, 18, 0.16);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 7px 14px rgba(66, 45, 16, 0.18);
 }
 
-.royal-emblem em {
+.royal-medallion em {
   position: relative;
   z-index: 1;
   display: grid;
-  width: 56px;
-  height: 56px;
+  width: 70px;
+  height: 70px;
   place-items: center;
   border-radius: 999px;
   background: #17324d;
@@ -413,16 +395,27 @@ h3 {
 }
 
 .royal-badge-copy {
+  position: relative;
   display: grid;
   min-width: 0;
   justify-items: start;
-  gap: 4px;
+  gap: 2px;
+  margin-left: -18px;
+  border: 1px solid rgba(159, 111, 35, 0.28);
+  border-left: 0;
+  border-radius: 0 999px 999px 0;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 244, 0.96), rgba(248, 232, 194, 0.92)),
+    radial-gradient(circle at right, rgba(255, 255, 255, 0.64), transparent 48%);
+  padding: 15px 18px 15px 34px;
+  box-shadow: 0 10px 20px rgba(80, 52, 17, 0.09);
+  z-index: 1;
 }
 
 .royal-badge-copy p {
   margin: 0;
-  color: #9b6b17;
-  font-size: 0.72rem;
+  color: #9c6b1d;
+  font-size: 0.68rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -432,7 +425,7 @@ h3 {
   max-width: 100%;
   overflow: hidden;
   color: #17324d;
-  font-size: clamp(1.05rem, 1.8vw, 1.45rem);
+  font-size: clamp(1.05rem, 1.75vw, 1.38rem);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -440,39 +433,35 @@ h3 {
 .royal-badge-copy span {
   display: inline-flex;
   max-width: 100%;
-  border: 1px solid rgba(170, 124, 48, 0.26);
+  border: 1px solid rgba(170, 124, 48, 0.24);
   border-radius: 999px;
-  background: rgba(255, 253, 244, 0.76);
+  background: rgba(255, 255, 255, 0.58);
   color: #7a581b;
   font-size: 0.76rem;
   font-weight: 800;
-  padding: 5px 10px;
+  padding: 4px 9px;
 }
 
 .royal-badge::before,
 .royal-badge::after {
   content: "";
   position: absolute;
-  top: 37px;
-  width: 58px;
-  height: 78px;
-  border-top: 2px solid rgba(170, 124, 48, 0.34);
-  border-bottom: 2px solid rgba(170, 124, 48, 0.2);
+  top: 71px;
+  width: 50px;
+  height: 30px;
+  background: linear-gradient(135deg, rgba(168, 114, 28, 0.26), rgba(255, 244, 211, 0.6));
+  clip-path: polygon(0 0, 100% 0, 78% 100%, 20% 68%);
   pointer-events: none;
 }
 
 .royal-badge::before {
-  left: -8px;
-  border-left: 2px solid rgba(170, 124, 48, 0.22);
-  border-radius: 58px 0 0 58px;
-  transform: rotate(-29deg);
+  left: 7px;
+  transform: rotate(14deg);
 }
 
 .royal-badge::after {
-  left: 72px;
-  border-right: 2px solid rgba(170, 124, 48, 0.22);
-  border-radius: 0 58px 58px 0;
-  transform: rotate(29deg);
+  left: 50px;
+  transform: scaleX(-1) rotate(14deg);
 }
 
 .royal-badge.rank-leadership-team,
@@ -481,7 +470,7 @@ h3 {
 }
 
 .royal-badge.rank-corporate-team .royal-emblem {
-  filter: drop-shadow(0 12px 18px rgba(82, 57, 18, 0.16));
+  filter: drop-shadow(0 12px 18px rgba(46, 140, 168, 0.18));
 }
 
 .sr-only {
@@ -505,7 +494,7 @@ h3 {
     justify-self: start;
   }
 
-  .royal-emblem {
+  .royal-medallion {
     width: 100px;
     height: 102px;
     transform: scale(0.84);

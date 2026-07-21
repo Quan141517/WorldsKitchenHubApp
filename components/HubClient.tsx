@@ -1549,16 +1549,15 @@ function RoyalBadge({ session, role }: { session: DiscordSession; role: StaffRol
 
   return (
     <article className={`royal-badge rank-${role?.id || "none"}`} title={`${username} - ${rankName}`}>
-      <div className="royal-emblem">
-        <span>
-          {avatarUrl ? <Image className="royal-avatar" src={avatarUrl} alt="" width={54} height={54} /> : <em>{username.slice(0, 2).toUpperCase()}</em>}
-        </span>
+      <div className="royal-medallion">
+        {avatarUrl ? <Image className="royal-avatar" src={avatarUrl} alt="" width={72} height={72} /> : <em>{username.slice(0, 2).toUpperCase()}</em>}
       </div>
       <div className="royal-badge-copy">
-        <p>WK Badge</p>
+        <p>World&apos;s Kitchen Badge</p>
         <strong>{username}</strong>
         <span>{rankName}</span>
       </div>
+      <div className="royal-ribbon" aria-hidden="true" />
     </article>
   );
 }
