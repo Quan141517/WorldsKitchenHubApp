@@ -1548,7 +1548,7 @@ function RoyalBadge({ session, role }: { session: DiscordSession; role: StaffRol
   const avatarUrl = session.robloxAvatarUrl || session.avatarUrl;
 
   return (
-    <article className={`royal-badge rank-${role?.id || "none"}`} title={`${username} - ${rankName}`}>
+    <article className={`royal-badge rank-${role?.id || "none"}`} title={`${username} - ${rankName}`} onCopy={(event) => event.preventDefault()} onContextMenu={(event) => event.preventDefault()}>
       <div className="royal-medallion">
         {avatarUrl ? <Image className="royal-avatar" src={avatarUrl} alt="" width={72} height={72} /> : <em>{username.slice(0, 2).toUpperCase()}</em>}
       </div>

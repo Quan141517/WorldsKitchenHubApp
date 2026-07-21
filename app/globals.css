@@ -317,13 +317,15 @@ h3 {
   position: relative;
   display: grid;
   grid-template-columns: auto minmax(150px, 1fr);
-  gap: 0;
+  gap: 8px;
   align-items: center;
   width: min(360px, 100%);
   min-height: 112px;
   justify-self: end;
   align-self: center;
   margin-right: clamp(0px, 1vw, 12px);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .royal-medallion {
@@ -400,14 +402,14 @@ h3 {
   min-width: 0;
   justify-items: start;
   gap: 2px;
-  margin-left: -18px;
+  margin-left: -10px;
   border: 1px solid rgba(159, 111, 35, 0.28);
   border-left: 0;
   border-radius: 0 999px 999px 0;
   background:
     linear-gradient(180deg, rgba(255, 253, 244, 0.96), rgba(248, 232, 194, 0.92)),
     radial-gradient(circle at right, rgba(255, 255, 255, 0.64), transparent 48%);
-  padding: 15px 18px 15px 34px;
+  padding: 15px 18px 15px 30px;
   box-shadow: 0 10px 20px rgba(80, 52, 17, 0.09);
   z-index: 1;
 }
@@ -469,7 +471,7 @@ h3 {
   color: #6f5018;
 }
 
-.royal-badge.rank-corporate-team .royal-emblem {
+.royal-badge.rank-corporate-team .royal-medallion {
   filter: drop-shadow(0 12px 18px rgba(46, 140, 168, 0.18));
 }
 
