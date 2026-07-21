@@ -1545,13 +1545,20 @@ function CategoryLinkManager({
 function RoyalBadge({ session, role }: { session: DiscordSession; role: StaffRole | null }) {
   const username = session.robloxUsername || session.username;
   const rankName = role?.name || "No matching role";
+  const avatarUrl = session.robloxAvatarUrl || session.avatarUrl;
 
   return (
     <article className={`royal-badge rank-${role?.id || "none"}`} title={`${username} - ${rankName}`}>
-      <div className="royal-emblem" aria-hidden="true">
-        <span />
+      <div className="royal-emblem">
+        <span>
+          {avatarUrl ? <Image className="royal-avatar" src={avatarUrl} alt="" width={54} height={54} /> : <em>{username.slice(0, 2).toUpperCase()}</em>}
+        </span>
       </div>
-      <span className="sr-only">{username} - {rankName}</span>
+      <div className="royal-badge-copy">
+        <p>Royal Badge</p>
+        <strong>{username}</strong>
+        <span>{rankName}</span>
+      </div>
     </article>
   );
 }
