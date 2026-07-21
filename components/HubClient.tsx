@@ -1553,8 +1553,12 @@ function RoyalBadge({ session, role }: { session: DiscordSession; role: StaffRol
         <p className="eyebrow">Royal Badge</p>
         <h3>{username}</h3>
         <p>{rankName}</p>
+        <div className="royal-badge-slots" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
       </div>
-      <div className="royal-badge-glow" aria-hidden="true" />
     </article>
   );
 }
