@@ -402,14 +402,14 @@ h3 {
   min-width: 0;
   justify-items: start;
   gap: 2px;
-  margin-left: -68px;
+  margin-left: -46px;
   border: 1px solid rgba(159, 111, 35, 0.28);
   border-left: 0;
   border-radius: 0 999px 999px 0;
   background:
     linear-gradient(180deg, rgba(255, 253, 244, 0.96), rgba(248, 232, 194, 0.92)),
     radial-gradient(circle at right, rgba(255, 255, 255, 0.64), transparent 48%);
-  padding: 15px 18px 15px 86px;
+  padding: 15px 18px 15px 64px;
   box-shadow: 0 10px 20px rgba(80, 52, 17, 0.09);
   z-index: 1;
 }
@@ -420,7 +420,7 @@ h3 {
   left: 0;
   top: 0;
   bottom: 0;
-  width: 82px;
+  width: 58px;
   background: linear-gradient(90deg, rgba(255, 240, 183, 0.9), rgba(255, 253, 244, 0.78));
   pointer-events: none;
 }
