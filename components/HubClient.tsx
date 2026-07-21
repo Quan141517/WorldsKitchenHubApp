@@ -358,6 +358,7 @@ export function HubClient({ session: initialSession, initialData }: { session: D
   const [categoryLinkManagerState, setCategoryLinkManagerState] = useState<{ categoryId: string } | null>(null);
   const [announcementEditorState, setAnnouncementEditorState] = useState<{ announcementId: string | null } | null>(null);
   const [linkManagerOpen, setLinkManagerOpen] = useState(false);
+  const refreshedPreviewProfileRef = useRef("");
   const previewProfile = useMemo(() => {
     const previewId = previewDiscordUserId.trim().toLowerCase();
     if (!previewId) return null;
@@ -454,6 +455,26 @@ export function HubClient({ session: initialSession, initialData }: { session: D
       window.clearInterval(interval);
     };
   }, [session.role?.id, session.robloxRoleRank]);
+
+  useEffect(() => {
+    if (sessionRole?.id !== "owner" || !previewProfile?.robloxUserId) return;
+    const refreshKey = `${previewProfile.discordUserId}:${previewDiscordUserId.trim().toLowerCase()}`;
+    if (refreshedPreviewProfileRef.current === refreshKey) return;
+    refreshedPreviewProfileRef.current = refreshKey;
+
+    async function refreshPreviewProfile() {
+      const response = await fetch("/api/admin/profiles/refresh", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId: previewDiscordUserId.trim() }),
+      });
+      if (!response.ok) return;
+      const result = (await response.json()) as { data: HubData };
+      setHubData(result.data);
+    }
+
+    void refreshPreviewProfile();
+  }, [previewDiscordUserId, previewProfile?.discordUserId, previewProfile?.robloxUserId, sessionRole?.id]);
   const canSeeStaffActivity = canViewStaffActivity(role, effectiveAdminPermissionSet);
   const canSeeRecoveryBin = Boolean(role?.id === "owner" || effectiveAdminPermissionSet.has("view_recovery_bin") || effectiveAdminPermissionSet.has("manage_recovery_bin") || effectiveAdminPermissionSet.has("restore_from_bin") || effectiveAdminPermissionSet.has("delete_permanently") || effectiveAdminPermissionSet.has("move_resources_to_bin"));
   const canSeeAuditLogs = Boolean(role?.id === "owner" || effectiveAdminPermissionSet.has("view_audit_logs"));
