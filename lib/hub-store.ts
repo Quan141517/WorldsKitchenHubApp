@@ -139,6 +139,7 @@ function normalizeHubData(data: HubData): HubData {
     adminLevels: normalizeAdminLevels(data.adminLevels),
     adminGrants: data.adminGrants || [],
     teamPermissions: normalizeTeamPermissions(data.teamPermissions),
+    roleOverrides: data.roleOverrides || [],
     auditLogs: data.auditLogs || [],
     auditLogsPaused: data.auditLogsPaused || false,
   };

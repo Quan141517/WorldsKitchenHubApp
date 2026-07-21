@@ -1252,6 +1252,8 @@ h3 {
 
 .server-log-toolbar {
   display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   justify-content: flex-end;
 }
 
@@ -1630,16 +1632,28 @@ h3 {
 
 .audit-log-item {
   display: grid;
-  gap: 4px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  align-items: center;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fffefa;
   padding: 12px;
 }
 
+.audit-log-item strong,
+.audit-log-item span {
+  grid-column: 1;
+}
+
 .audit-log-item span {
   color: var(--muted);
   font-size: 0.86rem;
+}
+
+.audit-log-item .button {
+  grid-column: 2;
+  grid-row: 1 / span 3;
 }
 
 .admin-layout {
@@ -1774,6 +1788,13 @@ h3 {
   margin-top: 14px;
 }
 
+.admin-override-form {
+  display: grid;
+  grid-template-columns: minmax(190px, 1fr) minmax(180px, 240px) minmax(180px, 1fr) auto;
+  gap: 10px;
+  margin-top: 14px;
+}
+
 .admin-grant-row {
   display: flex;
   align-items: center;
@@ -1797,6 +1818,31 @@ h3 {
   align-self: center;
   justify-self: center;
   width: min(420px, 100%);
+}
+
+.profile-directory {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.profile-directory .profile-row > div {
+  justify-self: start;
+}
+
+.leaderboard-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.leaderboard-week-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.button.tiny {
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: 0.82rem;
 }
 
 .modal-backdrop {

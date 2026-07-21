@@ -1,8 +1,9 @@
 import { cookies } from "next/headers";
 import type { NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { readHubData } from "./hub-store";
 import { getRobloxGroupMembership } from "./roblox";
-import { getStaffRoleFromRobloxRank } from "./roles";
+import { getStaffRoleFromRobloxRank, staffRoles } from "./roles";
 import type { StaffRole } from "./roles";
 
 export type DiscordSession = {
@@ -76,9 +77,24 @@ export async function getSession() {
 
   try {
     const membership = await getRobloxGroupMembership(session.robloxUserId);
+    const realRole = getStaffRoleFromRobloxRank(membership?.roleRank);
+    let overrideRole = null;
+
+    try {
+      const data = await readHubData();
+      const override = data.roleOverrides?.find((item) =>
+        item.userId === session.robloxUserId ||
+        item.userId === session.discordUserId ||
+        item.userId.toLowerCase() === session.robloxUsername?.toLowerCase()
+      );
+      overrideRole = override ? staffRoles.find((role) => role.id === override.roleId) || null : null;
+    } catch {
+      overrideRole = null;
+    }
+
     return {
       ...session,
-      role: getStaffRoleFromRobloxRank(membership?.roleRank),
+      role: realRole?.id === "owner" ? realRole : overrideRole || realRole,
       robloxRoleName: membership?.roleName,
       robloxRoleRank: membership?.roleRank,
     };

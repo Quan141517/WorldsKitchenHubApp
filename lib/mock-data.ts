@@ -205,6 +205,16 @@ export type TeamPermissionGrant = {
   updatedBy?: string;
 };
 
+export type RoleOverride = {
+  id: string;
+  userId: string;
+  roleId: StaffRoleId;
+  note?: string;
+  createdAt: string;
+  createdBy: string;
+  updatedAt?: string;
+};
+
 export type HubData = {
   profiles: StaffProfile[];
   categories: Category[];
@@ -217,6 +227,7 @@ export type HubData = {
   adminLevels: AdminLevel[];
   adminGrants: AdminGrant[];
   teamPermissions: TeamPermissionGrant[];
+  roleOverrides: RoleOverride[];
   auditLogs: AuditLog[];
   auditLogsPaused?: boolean;
 };
@@ -390,6 +401,7 @@ export const adminLevels: AdminLevel[] = [
 ];
 
 export const adminGrants: AdminGrant[] = [];
+export const roleOverrides: RoleOverride[] = [];
 
 export const teamPermissions: TeamPermissionGrant[] = [
   { roleId: "worlds-kitchen-team", permissions: [] },
@@ -412,6 +424,7 @@ export function createInitialHubData(): HubData {
     adminLevels,
     adminGrants,
     teamPermissions,
+    roleOverrides,
     auditLogs: [],
   };
 }

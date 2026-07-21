@@ -70,6 +70,7 @@ export function filterHubDataForSession(data: HubData, session: DiscordSession |
     adminLevels: owner ? data.adminLevels : data.adminLevels.filter((level) => ownAdminLevelIds.has(level.id)),
     adminGrants: owner ? data.adminGrants : activeOwnGrants,
     teamPermissions: owner ? data.teamPermissions : data.teamPermissions.filter((grant) => grant.roleId === role?.id),
+    roleOverrides: owner ? data.roleOverrides : [],
     auditLogs: canSeeAudit(role, permissions) ? data.auditLogs : [],
     auditLogsPaused: data.auditLogsPaused,
   };

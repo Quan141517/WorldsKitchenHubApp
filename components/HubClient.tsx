@@ -2,11 +2,11 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { activitySlots, adminPermissions, type ActivityLog, type ActivityMinuteEntry, type ActivitySlots, type AdminPermission, type AuditLog, type Category, type HubData, type QuickLink, type Resource, type ShiftRoles, type StaffProfile, type TeamPermissionGrant, type TrainingRoles, type WeeklyAssignment } from "@/lib/mock-data";
+import { activitySlots, adminPermissions, type ActivityLog, type ActivityMinuteEntry, type ActivitySlots, type AdminPermission, type AuditLog, type Category, type HubData, type QuickLink, type Resource, type RoleOverride, type ShiftRoles, type StaffProfile, type TeamPermissionGrant, type TrainingRoles, type WeeklyAssignment } from "@/lib/mock-data";
 import { staffRoles, type StaffRole, type StaffRoleId } from "@/lib/roles";
 import type { DiscordSession } from "@/lib/session";
 
-type HubView = "home" | "category" | "reader" | "staff-activity" | "bin" | "audit" | "admin";
+type HubView = "home" | "category" | "reader" | "staff-activity" | "bin" | "audit" | "admin" | "profiles";
 type ActivityTab = "my" | "lookup" | "logs" | "assignments" | "leaders";
 type ActivityLogPayload = { type: "training" | "shift"; dateLabel: string; time: string; roles: TrainingRoles | ShiftRoles; notes: string; creditedMinutes?: number };
 type ActivityLogUpdatePayload = { roles: TrainingRoles | ShiftRoles; notes: string; creditedMinutes?: number };
@@ -342,19 +342,34 @@ export function HubClient({ session: initialSession, initialData }: { session: D
   const sessionRole = session.role;
   const [previewRoleId, setPreviewRoleId] = useState<StaffRoleId | "">("");
   const [previewDiscordUserId, setPreviewDiscordUserId] = useState("");
-  const role = sessionRole?.id === "owner" && previewRoleId ? staffRoles.find((staffRole) => staffRole.id === previewRoleId) || sessionRole : sessionRole;
   const [hubData, setHubData] = useState<HubData>(initialData);
   const [editorState, setEditorState] = useState<{ categoryId: string; resourceId: string | null } | null>(null);
   const [categoryEditorState, setCategoryEditorState] = useState<{ categoryId: string | null } | null>(null);
   const [categoryLinkManagerState, setCategoryLinkManagerState] = useState<{ categoryId: string } | null>(null);
   const [announcementEditorState, setAnnouncementEditorState] = useState<{ announcementId: string | null } | null>(null);
   const [linkManagerOpen, setLinkManagerOpen] = useState(false);
+  const previewProfile = useMemo(() => {
+    const previewId = previewDiscordUserId.trim().toLowerCase();
+    if (!previewId) return null;
+    return hubData.profiles.find((profile) =>
+      profile.discordUserId.toLowerCase() === previewId ||
+      profile.robloxUserId?.toLowerCase() === previewId ||
+      profile.robloxUsername?.toLowerCase() === previewId ||
+      profile.robloxDisplayName?.toLowerCase() === previewId
+    ) || null;
+  }, [hubData.profiles, previewDiscordUserId]);
+  const previewProfileRole = previewProfile ? staffRoles.find((staffRole) => staffRole.id === previewProfile.highestRoleId) || null : null;
+  const role = sessionRole?.id === "owner"
+    ? previewRoleId
+      ? staffRoles.find((staffRole) => staffRole.id === previewRoleId) || sessionRole
+      : previewProfileRole || sessionRole
+    : sessionRole;
   const visibleCategories = useMemo(() => hubData.categories.filter((category) => !category.deletedAt && canSee(role, category.allowedRoleIds)), [hubData.categories, role]);
   const visibleAnnouncements = useMemo(() => hubData.announcements.filter((announcement) => !announcement.deletedAt && canSee(role, announcement.allowedRoleIds)), [hubData.announcements, role]);
   const visibleQuickLinks = useMemo(() => hubData.quickLinks.filter((link) => !link.deletedAt), [hubData.quickLinks]);
   const adminPermissionSet = useMemo(() => getRoleAdminPermissions(hubData, sessionRole?.id), [hubData, sessionRole?.id]);
-  const previewAdminPermissionSet = useMemo(() => getRoleAdminPermissions(hubData, previewRoleId || sessionRole?.id), [hubData, previewRoleId, sessionRole?.id]);
-  const isPreviewingNonOwner = Boolean(sessionRole?.id === "owner" && previewRoleId && previewRoleId !== "owner");
+  const previewAdminPermissionSet = useMemo(() => getRoleAdminPermissions(hubData, previewRoleId || previewProfileRole?.id || sessionRole?.id), [hubData, previewProfileRole?.id, previewRoleId, sessionRole?.id]);
+  const isPreviewingNonOwner = Boolean(sessionRole?.id === "owner" && (previewRoleId || previewProfile) && role?.id !== "owner");
   const effectiveAdminPermissionSet = useMemo(() => {
     if (sessionRole?.id === "owner" && previewRoleId) return previewAdminPermissionSet;
     return isPreviewingNonOwner ? new Set<AdminPermission>() : adminPermissionSet;
@@ -362,14 +377,16 @@ export function HubClient({ session: initialSession, initialData }: { session: D
   const currentProfile = hubData.profiles.find((profile) => profile.discordUserId === session.discordUserId);
   const activitySession = useMemo<DiscordSession>(() => {
     if (!isPreviewingNonOwner) return { ...session, username: currentProfile?.robloxUsername || session.username };
-    const previewUsername = currentProfile?.robloxUsername || session.robloxUsername || session.username;
+    const previewUsername = previewProfile?.robloxUsername || previewProfile?.discordUsername || currentProfile?.robloxUsername || session.robloxUsername || session.username;
     return {
       ...session,
-      discordUserId: previewDiscordUserId.trim() || "__preview_user__",
+      discordUserId: previewProfile?.discordUserId || previewDiscordUserId.trim() || "__preview_user__",
       username: previewUsername,
+      robloxUserId: previewProfile?.robloxUserId || session.robloxUserId,
+      robloxUsername: previewProfile?.robloxUsername || session.robloxUsername,
       avatarUrl: null,
     };
-  }, [currentProfile?.robloxUsername, isPreviewingNonOwner, previewDiscordUserId, session]);
+  }, [currentProfile?.robloxUsername, isPreviewingNonOwner, previewDiscordUserId, previewProfile, session]);
   const [activeView, setActiveView] = useState<HubView>("home");
   const [activeCategoryId, setActiveCategoryId] = useState(visibleCategories[0]?.id || "");
   const [activeResourceId, setActiveResourceId] = useState("");
@@ -431,6 +448,7 @@ export function HubClient({ session: initialSession, initialData }: { session: D
   const canSeeRecoveryBin = Boolean(role?.id === "owner" || effectiveAdminPermissionSet.has("view_recovery_bin") || effectiveAdminPermissionSet.has("manage_recovery_bin") || effectiveAdminPermissionSet.has("restore_from_bin") || effectiveAdminPermissionSet.has("delete_permanently") || effectiveAdminPermissionSet.has("move_resources_to_bin"));
   const canSeeAuditLogs = Boolean(role?.id === "owner" || effectiveAdminPermissionSet.has("view_audit_logs"));
   const canSeeAdminUsers = canViewAdminTools(role);
+  const canSeeProfiles = canViewAdminTools(role);
   const canManageCategories = canViewAdminTools(role) || effectiveAdminPermissionSet.has("manage_categories");
 
   useEffect(() => {
@@ -439,11 +457,12 @@ export function HubClient({ session: initialSession, initialData }: { session: D
       (activeView === "staff-activity" && !canSeeStaffActivity) ||
       (activeView === "bin" && !canSeeRecoveryBin) ||
       (activeView === "audit" && !canSeeAuditLogs) ||
-      (activeView === "admin" && !canSeeAdminUsers);
+      (activeView === "admin" && !canSeeAdminUsers) ||
+      (activeView === "profiles" && !canSeeProfiles);
 
     if (blockedView) setActiveView("home");
     if (!canManageCategories && categoryEditorState) setCategoryEditorState(null);
-  }, [activeView, canManageCategories, canSeeAdminUsers, canSeeAuditLogs, canSeeRecoveryBin, canSeeStaffActivity, categoryEditorState, role]);
+  }, [activeView, canManageCategories, canSeeAdminUsers, canSeeAuditLogs, canSeeProfiles, canSeeRecoveryBin, canSeeStaffActivity, categoryEditorState, role]);
 
   function openCategory(categoryId: string) {
     setActiveCategoryId(categoryId);
@@ -765,6 +784,52 @@ export function HubClient({ session: initialSession, initialData }: { session: D
     setHubData(result.data);
   }
 
+  async function saveRoleOverride(override: { userId: string; roleId: StaffRoleId; note?: string }) {
+    const response = await fetch("/api/admin/role-overrides", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(override),
+    });
+
+    if (!response.ok) {
+      window.alert("The testing role override could not be saved.");
+      return;
+    }
+
+    const result = (await response.json()) as { data: HubData };
+    setHubData(result.data);
+  }
+
+  async function deleteRoleOverride(overrideId: string) {
+    const response = await fetch(`/api/admin/role-overrides/${overrideId}`, { method: "DELETE" });
+
+    if (!response.ok) {
+      window.alert("The testing role override could not be removed.");
+      return;
+    }
+
+    const result = (await response.json()) as { data: HubData };
+    setHubData(result.data);
+  }
+
+  async function deleteAuditLog(logId: string) {
+    const response = await fetch(`/api/audit-logs/${logId}`, { method: "DELETE" });
+    if (!response.ok) return;
+    const result = (await response.json()) as { data: HubData };
+    setHubData(result.data);
+  }
+
+  async function clearAuditLogs(logIds?: string[]) {
+    const response = await fetch("/api/audit-logs/clear", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ logIds }),
+    });
+    if (!response.ok) return;
+    const result = (await response.json()) as { data: HubData };
+    setHubData(result.data);
+  }
+
   async function addCategoryLink(categoryId: string, link: { label: string; url: string }) {
     const response = await fetch(`/api/categories/${categoryId}/links`, {
       method: "POST",
@@ -870,6 +935,13 @@ export function HubClient({ session: initialSession, initialData }: { session: D
               }}
               placeholder="Enter preview user ID"
             />
+            {previewDiscordUserId.trim() ? (
+              <p className="muted">
+                {previewProfile
+                  ? `Previewing ${previewProfile.robloxUsername || previewProfile.discordUsername}: ${previewProfileRole?.name || "No matching Roblox group role"}`
+                  : "No connected profile found for that ID."}
+              </p>
+            ) : null}
             <p className="muted">{visibleCategories.length} visible categories. Team permissions control actions.</p>
             <p className="muted">{effectiveAdminPermissionSet.size} active permissions for this preview.</p>
           </div>
@@ -889,7 +961,8 @@ export function HubClient({ session: initialSession, initialData }: { session: D
         <div className="sidebar-footer">
           {canSeeRecoveryBin ? <button className={`sidebar-button ${activeView === "bin" ? "active" : ""}`} type="button" onClick={() => setActiveView("bin")}>Recovery Bin</button> : null}
           {canSeeAuditLogs ? <button className={`sidebar-button ${activeView === "audit" ? "active" : ""}`} type="button" onClick={() => setActiveView("audit")}>Audit Logs</button> : null}
-        {canSeeAdminUsers ? <button className={`sidebar-button ${activeView === "admin" ? "active" : ""}`} type="button" onClick={() => setActiveView("admin")}>Permissions</button> : null}
+          {canSeeProfiles ? <button className={`sidebar-button ${activeView === "profiles" ? "active" : ""}`} type="button" onClick={() => setActiveView("profiles")}>Connected Profiles</button> : null}
+          {canSeeAdminUsers ? <button className={`sidebar-button ${activeView === "admin" ? "active" : ""}`} type="button" onClick={() => setActiveView("admin")}>Permissions</button> : null}
         </div>
       </aside>
 
@@ -1004,12 +1077,15 @@ export function HubClient({ session: initialSession, initialData }: { session: D
             permanentlyDeleteResource={permanentlyDeleteResource}
           />
         ) : null}
-        {activeView === "audit" && canSeeAuditLogs ? <AuditLogsView logs={hubData.auditLogs} /> : null}
+        {activeView === "audit" && canSeeAuditLogs ? <AuditLogsView logs={hubData.auditLogs} deleteAuditLog={deleteAuditLog} clearAuditLogs={clearAuditLogs} canDelete={role?.id === "owner"} /> : null}
+        {activeView === "profiles" && canSeeProfiles ? <ConnectedProfilesView profiles={hubData.profiles} /> : null}
         {activeView === "admin" && canSeeAdminUsers ? (
           <AdminUsersView
-            profiles={hubData.profiles}
             teamPermissions={hubData.teamPermissions}
+            roleOverrides={hubData.roleOverrides}
             saveTeamPermissions={saveTeamPermissions}
+            saveRoleOverride={saveRoleOverride}
+            deleteRoleOverride={deleteRoleOverride}
           />
         ) : null}
       </section>
@@ -2071,7 +2147,7 @@ function StaffActivityView({
       {activeTab === "lookup" && canUseLookup ? <LookupPanel role={role} profiles={profiles} activityLogs={activeLogs} activityMinuteEntries={activityMinuteEntries} weeklyAssignments={activeAssignments} /> : null}
       {activeTab === "logs" ? <LogsPanel role={role} session={session} adminPermissions={adminPermissions} activitySlotsConfig={activitySlotsConfig} activityLogs={activeLogs} profiles={profiles} createActivityLog={createActivityLog} updateActivityLog={updateActivityLog} deleteActivityLog={deleteActivityLog} /> : null}
       {activeTab === "assignments" && canUseAssignments ? <AssignmentsPanel role={role} adminPermissions={adminPermissions} activitySlotsConfig={activitySlotsConfig} weeklyAssignments={activeAssignments} saveWeeklyAssignment={saveWeeklyAssignment} saveActivitySlots={saveActivitySlots} deleteWeeklyAssignment={deleteWeeklyAssignment} /> : null}
-      {activeTab === "leaders" ? <LeaderboardsPanel activityLogs={activeLogs} activityMinuteEntries={activityMinuteEntries} /> : null}
+      {activeTab === "leaders" ? <LeaderboardsPanel session={session} profiles={profiles} activityLogs={activeLogs} activityMinuteEntries={activityMinuteEntries} /> : null}
       <datalist id="staffUsernameSuggestions">
         {usernameSuggestions.map((username) => <option value={username} key={username} />)}
       </datalist>
@@ -2698,6 +2774,18 @@ function ActivityLogDetail({
         </div>
         <div className="server-log-toolbar">
           {canLog ? <button className="button primary" type="button" onClick={() => setFormOpen(true)}>Create New Server</button> : <span className="status-pill">Read only</span>}
+          {canLog && logs.length ? (
+            <button
+              className="button secondary danger-text"
+              type="button"
+              onClick={() => {
+                if (!window.confirm(`Delete all ${logs.length} logs for this ${isTraining ? "training" : "shift"} slot?`)) return;
+                void Promise.all(logs.map((log) => deleteActivityLog(log.id)));
+              }}
+            >
+              Delete Slot Logs
+            </button>
+          ) : null}
         </div>
         {formOpen ? (
           <ActivityLogForm
@@ -3079,71 +3167,111 @@ function SlotTimeEditor({
   );
 }
 
-function LeaderboardsPanel({ activityLogs, activityMinuteEntries }: { activityLogs: ActivityLog[]; activityMinuteEntries: ActivityMinuteEntry[] }) {
-  const weekStart = startOfWeek(getTodayDate());
+function LeaderboardsPanel({ session, profiles, activityLogs, activityMinuteEntries }: { session: DiscordSession; profiles: StaffProfile[]; activityLogs: ActivityLog[]; activityMinuteEntries: ActivityMinuteEntry[] }) {
+  const [weekOffset, setWeekOffset] = useState(0);
+  const weekStart = addDays(startOfWeek(getTodayDate()), weekOffset * 7);
   const weekEnd = addDays(weekStart, 7);
   const weeklyLogs = activityLogs.filter((log) => logIsInRange(log, weekStart, weekEnd));
   const weeklyMinutes = activityMinuteEntries.filter((entry) => isDateInRange(entry.recordedAt, weekStart, weekEnd));
+  const viewerNames = getViewerNames(session, profiles);
+  const viewerRobloxUserId = session.robloxUserId;
   const boards = [
     {
       title: "Minutes",
       rows: buildMinuteLeaderboard(weeklyMinutes),
+      currentTotal: sumTrackedMinutes(weeklyMinutes, viewerNames, weekStart, weekEnd, viewerRobloxUserId),
       format: (value: number) => `${value} min`,
     },
     {
       title: "Trainings",
       rows: buildLogLeaderboard(weeklyLogs.filter((log) => log.type === "training")),
+      currentTotal: countLogsForNames(weeklyLogs.filter((log) => log.type === "training"), viewerNames),
       format: (value: number) => pluralize(value, "log"),
     },
     {
       title: "Shifts",
       rows: buildLogLeaderboard(weeklyLogs.filter((log) => log.type === "shift")),
+      currentTotal: countLogsForNames(weeklyLogs.filter((log) => log.type === "shift"), viewerNames),
       format: (value: number) => pluralize(value, "log"),
     },
   ];
 
   return (
-    <div className="leaderboard-grid">
-      {boards.map((board, index) => {
-        const [winner, ...otherRows] = board.rows;
-        return (
-        <article className={`leaderboard-card tone-${index}`} key={board.title}>
-          <div className="leaderboard-head">
-            <div>
-              <p className="eyebrow">{board.title}</p>
-              <h4>{board.title} board</h4>
+    <div className="leaderboard-panel">
+      <div className="leaderboard-week-switcher">
+        {[
+          { label: "This week", value: 0 },
+          { label: "Last week", value: -1 },
+          { label: "2 weeks ago", value: -2 },
+        ].map((option) => (
+          <button className={weekOffset === option.value ? "activity-tab active" : "activity-tab"} type="button" key={option.value} onClick={() => setWeekOffset(option.value)}>
+            {option.label}
+          </button>
+        ))}
+      </div>
+      <div className="leaderboard-grid">
+        {boards.map((board, index) => {
+          const [winner, ...otherRows] = board.rows;
+          return (
+          <article className={`leaderboard-card tone-${index}`} key={board.title}>
+            <div className="leaderboard-head">
+              <div>
+                <p className="eyebrow">{board.title}</p>
+                <h4>{board.title} board</h4>
+              </div>
+              <span>{formatShortDate(weekStart)} - {formatShortDate(addDays(weekEnd, -1))}</span>
             </div>
-            <span>This week</span>
-          </div>
-          {winner ? (
-            <>
-              <div className="leaderboard-winner">
-                <span className="rank-avatar">{winner.name.slice(0, 2).toUpperCase()}</span>
-                <div>
-                  <strong>{winner.name}</strong>
-                  <p className="muted">Top spot - {board.format(winner.value)}</p>
-                </div>
-              </div>
-              <div className="leaderboard-rows">
-                {otherRows.slice(0, 2).map((row, rowIndex) => (
-                  <div className="leaderboard-row" key={row.name}>
-                    <span>#{rowIndex + 2}</span>
-                    <strong>{row.name}</strong>
-                    <em>{board.format(row.value)}</em>
+            {winner ? (
+              <>
+                <div className="leaderboard-winner">
+                  <span className="rank-avatar">{winner.name.slice(0, 2).toUpperCase()}</span>
+                  <div>
+                    <strong>{winner.name}</strong>
+                    <p className="muted">Top spot - {board.format(winner.value)}</p>
                   </div>
-                ))}
-              </div>
-            </>
-          ) : <EmptyState title="No data yet" text={`No ${board.title.toLowerCase()} have been recorded this week.`} />}
-          <div className="leaderboard-current">
-            <span>Total recorded</span>
-            <strong>{board.format(board.rows.reduce((total, row) => total + row.value, 0))}</strong>
-          </div>
-        </article>
-        );
-      })}
+                </div>
+                <div className="leaderboard-rows">
+                  {otherRows.slice(0, 2).map((row, rowIndex) => (
+                    <div className="leaderboard-row" key={row.name}>
+                      <span>#{rowIndex + 2}</span>
+                      <strong>{row.name}</strong>
+                      <em>{board.format(row.value)}</em>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : <EmptyState title="No data yet" text={`No ${board.title.toLowerCase()} have been recorded for this week.`} />}
+            <div className="leaderboard-current">
+              <span>Your recorded</span>
+              <strong>{board.format(board.currentTotal)}</strong>
+            </div>
+          </article>
+          );
+        })}
+      </div>
     </div>
   );
+}
+
+function getViewerNames(session: DiscordSession, profiles: StaffProfile[]) {
+  const profile = profiles.find((item) =>
+    item.discordUserId === session.discordUserId ||
+    item.robloxUserId === session.robloxUserId ||
+    item.robloxUsername?.toLowerCase() === session.robloxUsername?.toLowerCase()
+  );
+  return Array.from(new Set([
+    session.username,
+    session.robloxUsername,
+    session.robloxDisplayName,
+    profile?.discordUsername,
+    profile?.robloxUsername,
+    profile?.robloxDisplayName,
+  ].filter((name): name is string => Boolean(name?.trim()))));
+}
+
+function countLogsForNames(logs: ActivityLog[], names: string[]) {
+  const normalizedNames = names.map((name) => name.toLowerCase());
+  return logs.filter((log) => getActivityLogUsers(log).some((name) => normalizedNames.includes(name.toLowerCase()))).length;
 }
 
 function buildMinuteLeaderboard(entries: ActivityMinuteEntry[]) {
@@ -3308,7 +3436,17 @@ function RecoveryBinView({
   );
 }
 
-function AuditLogsView({ logs }: { logs: AuditLog[] }) {
+function AuditLogsView({
+  logs,
+  deleteAuditLog,
+  clearAuditLogs,
+  canDelete,
+}: {
+  logs: AuditLog[];
+  deleteAuditLog: (logId: string) => Promise<void>;
+  clearAuditLogs: (logIds?: string[]) => Promise<void>;
+  canDelete: boolean;
+}) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const logsPerPage = 12;
@@ -3335,6 +3473,8 @@ function AuditLogsView({ logs }: { logs: AuditLog[] }) {
       <div className="audit-pagination">
         <span>{filteredLogs.length} logs - Page {currentPage} of {pageCount}</span>
         <div className="header-actions">
+          {canDelete ? <button className="button secondary danger-text" type="button" disabled={!pageLogs.length} onClick={() => window.confirm("Delete every audit log on this page?") && void clearAuditLogs(pageLogs.map((log) => log.id))}>Delete Page</button> : null}
+          {canDelete ? <button className="button secondary danger-text" type="button" disabled={!logs.length} onClick={() => window.confirm("Delete all audit logs? This cannot be undone.") && void clearAuditLogs()}>Clear All</button> : null}
           <button className="button secondary" type="button" disabled={currentPage === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Previous</button>
           <button className="button secondary" type="button" disabled={currentPage === pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))}>Next</button>
         </div>
@@ -3345,6 +3485,7 @@ function AuditLogsView({ logs }: { logs: AuditLog[] }) {
             <strong>{log.action}</strong>
             <span>{log.detail}</span>
             <span>By {log.actor} - {new Date(log.createdAt).toLocaleString()} - {log.type}</span>
+            {canDelete ? <button className="button tiny danger-text" type="button" onClick={() => void deleteAuditLog(log.id)}>Delete</button> : null}
           </article>
         )) : <EmptyState title="No activity yet" text="Actions taken by Leadership and admins will appear here." />}
       </div>
@@ -3353,15 +3494,22 @@ function AuditLogsView({ logs }: { logs: AuditLog[] }) {
 }
 
 function AdminUsersView({
-  profiles,
   teamPermissions,
+  roleOverrides,
   saveTeamPermissions,
+  saveRoleOverride,
+  deleteRoleOverride,
 }: {
-  profiles: StaffProfile[];
   teamPermissions: TeamPermissionGrant[];
+  roleOverrides: RoleOverride[];
   saveTeamPermissions: (roleId: StaffRoleId, permissions: AdminPermission[]) => Promise<void>;
+  saveRoleOverride: (override: { userId: string; roleId: StaffRoleId; note?: string }) => Promise<void>;
+  deleteRoleOverride: (overrideId: string) => Promise<void>;
 }) {
   const [savingRoleId, setSavingRoleId] = useState<StaffRoleId | null>(null);
+  const [overrideUserId, setOverrideUserId] = useState("");
+  const [overrideRoleId, setOverrideRoleId] = useState<StaffRoleId>("management-team");
+  const [overrideNote, setOverrideNote] = useState("");
   const manageableRoles = staffRoles.filter((staffRole) => staffRole.id !== "owner");
 
   function getTeamPermissions(roleId: StaffRoleId) {
@@ -3376,6 +3524,14 @@ function AdminUsersView({
     setSavingRoleId(roleId);
     await saveTeamPermissions(roleId, nextPermissions);
     setSavingRoleId(null);
+  }
+
+  async function handleRoleOverrideSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!overrideUserId.trim()) return;
+    await saveRoleOverride({ userId: overrideUserId.trim(), roleId: overrideRoleId, note: overrideNote });
+    setOverrideUserId("");
+    setOverrideNote("");
   }
 
   return (
@@ -3396,6 +3552,44 @@ function AdminUsersView({
               <p className="muted">All {adminPermissionKeys.length} permissions are always enabled for you.</p>
             </div>
             <span className="status-pill published">Full access</span>
+          </div>
+        </article>
+        <article className="admin-card permission-board-card">
+          <div className="permission-board-summary">
+            <div>
+              <p className="eyebrow">Testing Access</p>
+              <h4>Role Overrides</h4>
+              <p className="muted">Give a Roblox user ID, username, or internal user ID a temporary team role for testing.</p>
+            </div>
+            <span className="status-pill">Owner only</span>
+          </div>
+          <form className="admin-override-form" onSubmit={handleRoleOverrideSubmit}>
+            <input value={overrideUserId} onChange={(event) => setOverrideUserId(event.target.value)} placeholder="Enter user ID or Roblox username" />
+            <select value={overrideRoleId} onChange={(event) => setOverrideRoleId(event.target.value as StaffRoleId)}>
+              {manageableRoles.map((staffRole) => <option value={staffRole.id} key={staffRole.id}>{staffRole.name}</option>)}
+            </select>
+            <input value={overrideNote} onChange={(event) => setOverrideNote(event.target.value)} placeholder="Type a note" />
+            <button className="button primary" type="submit">Save Override</button>
+          </form>
+          <div className="admin-grant-list">
+            {roleOverrides.length ? roleOverrides.map((override) => {
+              const overrideRole = staffRoles.find((staffRole) => staffRole.id === override.roleId);
+              return (
+                <div className="admin-grant-row" key={override.id}>
+                  <div>
+                    <strong>{override.userId}</strong>
+                    <p className="muted">{overrideRole?.name || override.roleId} - Added {formatDateTime(override.createdAt)}</p>
+                    {override.note ? <p className="muted">{override.note}</p> : null}
+                  </div>
+                  <button className="button secondary danger-text" type="button" onClick={() => void deleteRoleOverride(override.id)}>Remove</button>
+                </div>
+              );
+            }) : (
+              <div>
+                <strong>No testing overrides</strong>
+                <p className="muted">Users will follow their real Roblox group rank unless an override is saved here.</p>
+              </div>
+            )}
           </div>
         </article>
         {manageableRoles.map((staffRole) => {
@@ -3436,33 +3630,41 @@ function AdminUsersView({
             </article>
           );
         })}
-        <article className="admin-card">
+      </div>
+    </section>
+  );
+}
+
+function ConnectedProfilesView({ profiles }: { profiles: StaffProfile[] }) {
+  return (
+    <section className="workspace">
+      <div className="content-header">
+        <div>
           <p className="eyebrow">Connected Profiles</p>
-          <h4>Recent Roblox accounts</h4>
-          <div className="admin-grant-list">
-            {profiles.length ? profiles.map((profile) => {
-              const role = staffRoles.find((staffRole) => staffRole.id === profile.highestRoleId);
-              const robloxName = profile.robloxUsername || profile.robloxDisplayName || profile.discordUsername;
-              return (
-                <div className="admin-grant-row profile-row" key={profile.discordUserId}>
-                  {profile.robloxAvatarUrl ? <Image className="avatar" src={profile.robloxAvatarUrl} alt="" width={42} height={42} /> : null}
-                  <div>
-                    <strong>{robloxName}</strong>
-                    <p className="muted">{role?.name || "No matching Roblox group role"}</p>
-                    {profile.robloxUserId ? <p className="muted">Roblox ID {profile.robloxUserId}</p> : null}
-                    <p className="muted">Joined {formatDateTime(profile.createdAt)}</p>
-                    <p className="muted">Last seen {formatDateTime(profile.lastSeenAt || profile.updatedAt)}</p>
-                  </div>
-                </div>
-              );
-            }) : (
+          <h3>Recent Roblox Accounts</h3>
+          <p className="muted">Users appear here after they sign in or refresh their Roblox session.</p>
+        </div>
+        <span className="status-pill published">{profiles.length} profiles</span>
+      </div>
+      <div className="admin-grant-list profile-directory">
+        {profiles.length ? profiles.map((profile) => {
+          const role = staffRoles.find((staffRole) => staffRole.id === profile.highestRoleId);
+          const robloxName = profile.robloxUsername || profile.robloxDisplayName || profile.discordUsername;
+          return (
+            <div className="admin-grant-row profile-row" key={profile.discordUserId}>
+              {profile.robloxAvatarUrl ? <Image className="avatar" src={profile.robloxAvatarUrl} alt="" width={42} height={42} /> : null}
               <div>
-                <strong>No profile history yet</strong>
-                <p className="muted">Profiles appear here after staff sign in with Roblox.</p>
+                <strong>{robloxName}</strong>
+                <p className="muted">{role?.name || "No matching Roblox group role"}</p>
+                {profile.robloxUserId ? <p className="muted">Roblox ID {profile.robloxUserId}</p> : null}
+                <p className="muted">Joined {formatDateTime(profile.createdAt)}</p>
+                <p className="muted">Last seen {formatDateTime(profile.lastSeenAt || profile.updatedAt)}</p>
               </div>
-            )}
-          </div>
-        </article>
+            </div>
+          );
+        }) : (
+          <EmptyState title="No profile history yet" text="Profiles appear here after staff sign in with Roblox." />
+        )}
       </div>
     </section>
   );
